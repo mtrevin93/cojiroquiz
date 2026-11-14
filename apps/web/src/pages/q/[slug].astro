@@ -24,7 +24,7 @@ const answer = q.choices[q.answerIndex];
 const answerText = choiceText(answer);
 const short = oneLine(q.questionText, 70);
 const title = `${short} Answer: ${oneLine(answerText, 30)}`;
-const description = `Answer: ${answerText}. Quiz question${q.level ? ` (${q.level})` : ''}: ${oneLine(q.questionText, 150)}`;
+const description = `Answer: ${answerText}. Quiz question: ${oneLine(q.questionText, 150)}`;
 const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
 ---
 
@@ -84,9 +84,6 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
     </article>
 
     <dl class="facts">
-      {q.level && (
-        <div><dt>Level</dt><dd lang={q.lang}>{q.level}</dd></div>
-      )}
       <div><dt>Language</dt><dd>{langName(q.lang)}</dd></div>
       <div>
         <dt>Confirmations</dt>
