@@ -93,6 +93,9 @@ export interface S3StoreOptions {
   secretAccessKey: string;
   publicBucket: string;
   privateBucket: string;
+  /** Separate key for the private bucket (Fly issues one key per Tigris bucket). Defaults to the main key. */
+  privateAccessKeyId?: string;
+  privateSecretAccessKey?: string;
   /** Public URL prefix of the public bucket, e.g. "https://cojiroquiz-images.fly.storage.tigris.dev". */
   publicBaseUrl: string;
 }
@@ -103,13 +106,22 @@ export function createS3Store(opts: S3StoreOptions): BlobStore {
     region: opts.region,
     credentials: { accessKeyId: opts.accessKeyId, secretAccessKey: opts.secretAccessKey },
   });
+  const privateClient =
+    opts.privateAccessKeyId && opts.privateSecretAccessKey
+      ? new S3Client({
+          endpoint: opts.endpoint,
+          region: opts.region,
+          credentials: { accessKeyId: opts.privateAccessKeyId, secretAccessKey: opts.privateSecretAccessKey },
+        })
+      : client;
+  const clientFor = (b: Bucket) => (b === 'public' ? client : privateClient);
   const base = trimSlash(opts.publicBaseUrl);
   const bucketName = (b: Bucket) => (b === 'public' ? opts.publicBucket : opts.privateBucket);
 
   return {
     async put(bucket, key, body, contentType) {
       assertSafeKey(key);
-      await client.send(
+      await clientFor(bucket).send(
         new PutObjectCommand({
           Bucket: bucketName(bucket),
           Key: key,
@@ -123,7 +135,7 @@ export function createS3Store(opts: S3StoreOptions): BlobStore {
     async get(bucket, key) {
       assertSafeKey(key);
       try {
-        const res = await client.send(new GetObjectCommand({ Bucket: bucketName(bucket), Key: key }));
+        const res = await clientFor(bucket).send(new GetObjectCommand({ Bucket: bucketName(bucket), Key: key }));
         if (!res.Body) return null;
         return {
           body: await res.Body.transformToByteArray(),
@@ -137,7 +149,7 @@ export function createS3Store(opts: S3StoreOptions): BlobStore {
     },
     async delete(bucket, key) {
       assertSafeKey(key);
-      await client.send(new DeleteObjectCommand({ Bucket: bucketName(bucket), Key: key }));
+      await clientFor(bucket).send(new DeleteObjectCommand({ Bucket: bucketName(bucket), Key: key }));
     },
     publicUrl(key) {
       assertSafeKey(key);
@@ -145,7 +157,7 @@ export function createS3Store(opts: S3StoreOptions): BlobStore {
     },
     async signedUrl(key, expiresInSeconds = 300) {
       assertSafeKey(key);
-      return getSignedUrl(client, new GetObjectCommand({ Bucket: opts.privateBucket, Key: key }), {
+      return getSignedUrl(privateClient, new GetObjectCommand({ Bucket: opts.privateBucket, Key: key }), {
         expiresIn: expiresInSeconds,
       });
     },
@@ -180,6 +192,8 @@ export function createStoreFromEnv(env: Env = process.env): BlobStore {
       secretAccessKey: need('AWS_SECRET_ACCESS_KEY'),
       publicBucket: need('BUCKET_PUBLIC'),
       privateBucket: need('BUCKET_PRIVATE'),
+      privateAccessKeyId: env.PRIVATE_AWS_ACCESS_KEY_ID || undefined,
+      privateSecretAccessKey: env.PRIVATE_AWS_SECRET_ACCESS_KEY || undefined,
       publicBaseUrl: need('PUBLIC_IMAGE_BASE_URL'),
     });
   }
