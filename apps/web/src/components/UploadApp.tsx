@@ -1,14 +1,12 @@
-import type { ConfirmInput, ConfirmResult, DraftDTO, ManualInput, UploadResult } from '@cojiro/shared';
+import type { ConfirmInput, ConfirmResult, DraftDTO, UploadResult } from '@cojiro/shared';
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
-import { langName } from '../lib/text.ts';
 import { CheckIcon, CloseIcon } from './icons.tsx';
-import { questionPath } from './QuestionCard.tsx';
+import { QuestionText, questionPath } from './QuestionCard.tsx';
 import { postJson, TURNSTILE_HEADER, useTurnstile } from './useTurnstile.tsx';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_EDGE = 1600;
 const QUARANTINED_MESSAGE = "Couldn't read this one. Sent for review.";
-const COMMON_LANGS = ['en', 'ja', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ko', 'zh', 'ru'];
 
 type ItemStatus = 'queued' | 'preparing' | 'uploading' | 'reading' | 'review' | 'confirming' | 'done' | 'info' | 'error';
 
@@ -100,26 +98,12 @@ function uploadWithProgress(
 let nextId = 1;
 
 export default function UploadApp({ turnstileSiteKey }: { turnstileSiteKey?: string | null }) {
-  const [tab, setTab] = useState<'shot' | 'manual'>('shot');
   const turnstile = useTurnstile(turnstileSiteKey);
 
   return (
     <div>
-      <div className="tabs" role="tablist" aria-label="How to add a question">
-        <button type="button" role="tab" id="tab-shot" className="tab" aria-selected={tab === 'shot'} aria-controls="panel-shot" onClick={() => setTab('shot')}>
-          Screenshot
-        </button>
-        <button type="button" role="tab" id="tab-manual" className="tab" aria-selected={tab === 'manual'} aria-controls="panel-manual" onClick={() => setTab('manual')}>
-          Type it in
-        </button>
-      </div>
       {turnstile.slot}
-      <div role="tabpanel" id="panel-shot" aria-labelledby="tab-shot" hidden={tab !== 'shot'}>
-        <ScreenshotTab takeToken={turnstile.take} active={tab === 'shot'} />
-      </div>
-      <div role="tabpanel" id="panel-manual" aria-labelledby="tab-manual" hidden={tab !== 'manual'}>
-        <ManualTab takeToken={turnstile.take} />
-      </div>
+      <ScreenshotTab takeToken={turnstile.take} active />
     </div>
   );
 }
@@ -398,25 +382,16 @@ function Review({
 }) {
   const draft = item.draft!;
   const dupIndex = draft.duplicateOf ? draft.choices.findIndex((c) => c.label === draft.duplicateOf!.answerLabel) : -1;
-  const [lang, setLang] = useState(draft.lang);
-  const [level, setLevel] = useState(draft.level ?? '');
-  const [text, setText] = useState(draft.questionText);
-  const [labels, setLabels] = useState(draft.choices.map((c) => c.label));
-  const [editChoices, setEditChoices] = useState(false);
+  const lang = draft.lang;
   const [answer, setAnswer] = useState<number | null>(draft.detectedAnswerIndex ?? (dupIndex >= 0 ? dupIndex : null));
   const saving = item.status === 'confirming';
   const lowConfidence = draft.confidence !== 'high';
-  const langs = COMMON_LANGS.includes(lang) ? COMMON_LANGS : [lang, ...COMMON_LANGS];
 
   function submit(e: { preventDefault(): void }) {
     e.preventDefault();
-    if (answer === null || !text.trim()) return;
-    const input: ConfirmInput = { answerIndex: answer };
-    if (text !== draft.questionText) input.questionText = text;
-    if (lang !== draft.lang) input.lang = lang;
-    if ((level.trim() || null) !== draft.level) input.level = level.trim() || null;
-    if (labels.some((l, i) => l !== draft.choices[i]?.label)) input.choiceLabels = labels;
-    onConfirm(input);
+    if (answer === null) return;
+    // The text comes from the screenshot only; uploaders choose the answer, nothing else.
+    onConfirm({ answerIndex: answer });
   }
 
   return (
@@ -436,7 +411,7 @@ function Review({
       )}
       {lowConfidence && (
         <div className="notice">
-          <p>Hard to read. Check the text and choices.</p>
+          <p>Hard to read. If the text is wrong, skip it.</p>
         </div>
       )}
       {item.message && (
@@ -446,24 +421,10 @@ function Review({
       )}
 
       <div className="qcard">
-        <div className="qcard-head">
-          <span className="qcard-num">Question</span>
-          <span className="qcard-level">{level || 'No level'}</span>
-        </div>
         <div className="qcard-body">
-          <label className="sr-only" htmlFor={`rv-text-${item.id}`}>
-            Question text
-          </label>
-          <textarea
-            id={`rv-text-${item.id}`}
-            lang={lang}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={Math.min(8, Math.max(3, text.split('\n').length + 1))}
-            maxLength={2000}
-            required
-            spellCheck={false}
-          />
+          <p className="qcard-text" lang={lang}>
+            <QuestionText text={draft.questionText} />
+          </p>
         </div>
         <div className="qcard-foot">
           <fieldset className="pick-list">
@@ -484,8 +445,8 @@ function Review({
                 {answer === i && <CheckIcon />}
                 {c.previewUrl && <img src={c.previewUrl} alt="" width={64} height={64} />}
                 <span>
-                  {labels[i] || c.description || `Choice ${i + 1}`}
-                  {c.kind === 'image' && c.description && labels[i] ? <span className="choice-desc">{c.description}</span> : null}
+                  {c.label || c.description || `Choice ${i + 1}`}
+                  {c.kind === 'image' && c.description && c.label ? <span className="choice-desc">{c.description}</span> : null}
                 </span>
               </button>
             ))}
@@ -493,200 +454,12 @@ function Review({
         </div>
       </div>
 
-      <div className="review-grid" style={{ marginTop: 14 }}>
-        <div>
-          <label htmlFor={`rv-lang-${item.id}`}>Language</label>
-          <select id={`rv-lang-${item.id}`} value={lang} onChange={(e) => setLang(e.target.value)}>
-            {langs.map((l) => (
-              <option key={l} value={l}>
-                {langName(l)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor={`rv-level-${item.id}`}>Level</label>
-          <input id={`rv-level-${item.id}`} type="text" value={level} maxLength={100} onChange={(e) => setLevel(e.target.value)} placeholder="Egg Level" />
-        </div>
-      </div>
-
-      <p style={{ margin: '10px 0 0' }}>
-        <button type="button" className="link-btn" aria-expanded={editChoices} onClick={() => setEditChoices((v) => !v)}>
-          {editChoices ? 'Done' : 'Fix a choice'}
-        </button>
-      </p>
-      {editChoices && (
-        <div className="choice-inputs">
-          {labels.map((l, i) => (
-            <div key={i}>
-              <label className="sr-only" htmlFor={`rv-choice-${item.id}-${i}`}>
-                Choice {i + 1}
-              </label>
-              <input
-                id={`rv-choice-${item.id}-${i}`}
-                type="text"
-                lang={lang}
-                value={l}
-                maxLength={300}
-                onChange={(e) => setLabels((ls) => ls.map((x, j) => (j === i ? e.target.value : x)))}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="sticky-bar">
         <button type="button" className="btn ghost" onClick={onSkip} disabled={saving}>
           Skip
         </button>
-        <button type="submit" className="btn" disabled={saving || answer === null || !text.trim()}>
+        <button type="submit" className="btn" disabled={saving || answer === null}>
           {saving ? 'Saving…' : answer === null ? 'Tap the correct answer' : 'Publish'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-/* ---------------------------------------------------------------- manual tab */
-
-function ManualTab({ takeToken }: { takeToken: () => Promise<string | null> }) {
-  const [lang, setLang] = useState('en');
-  const [level, setLevel] = useState('');
-  const [text, setText] = useState('');
-  const [choices, setChoices] = useState<string[]>(['', '']);
-  const [answer, setAnswer] = useState<number | null>(null);
-  const [state, setState] = useState<
-    { kind: 'idle' } | { kind: 'sending' } | { kind: 'error'; message: string } | { kind: 'done'; result: ConfirmResult }
-  >({ kind: 'idle' });
-
-  useEffect(() => {
-    const primary = navigator.language?.toLowerCase().split('-')[0];
-    if (primary && COMMON_LANGS.includes(primary)) setLang(primary);
-  }, []);
-
-  const filled = choices.map((c) => c.trim());
-  const valid = text.trim() !== '' && filled.every(Boolean) && filled.length >= 2 && answer !== null && answer < filled.length;
-
-  async function submit(e: { preventDefault(): void }) {
-    e.preventDefault();
-    if (!valid || answer === null) return;
-    setState({ kind: 'sending' });
-    const input: ManualInput = {
-      lang,
-      level: level.trim() || null,
-      questionText: text.trim(),
-      choiceLabels: filled,
-      answerIndex: answer,
-    };
-    const token = await takeToken();
-    const res = await postJson('/api/questions', input, token);
-    if (res.ok && res.data?.slug) {
-      setState({ kind: 'done', result: res.data as ConfirmResult });
-      setText('');
-      setChoices(['', '']);
-      setAnswer(null);
-    } else {
-      setState({ kind: 'error', message: res.data?.error ?? 'Could not save. Try again.' });
-    }
-  }
-
-  const truefalse = () => {
-    setChoices(['X', '✓']);
-    setAnswer(null);
-  };
-
-  return (
-    <form onSubmit={submit}>
-      {state.kind === 'done' && (
-        <div className="notice success" role="status">
-          <p>
-            {state.result.merged ? 'Already had this one. Answer counted.' : 'Published.'}{' '}
-            <a href={questionPath(state.result.slug)}>View</a>
-          </p>
-        </div>
-      )}
-      <div className="field">
-        <label htmlFor="m-text">
-          Question <span className="hint">Exactly as shown.</span>
-        </label>
-        <textarea id="m-text" lang={lang} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} required spellCheck={false} />
-      </div>
-      <div className="review-grid field">
-        <div>
-          <label htmlFor="m-lang">Language</label>
-          <select id="m-lang" value={lang} onChange={(e) => setLang(e.target.value)}>
-            {COMMON_LANGS.map((l) => (
-              <option key={l} value={l}>
-                {langName(l)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="m-level">Level</label>
-          <input id="m-level" type="text" value={level} maxLength={100} onChange={(e) => setLevel(e.target.value)} placeholder="Egg Level" />
-        </div>
-      </div>
-      <fieldset className="pick-list field">
-        <legend>
-          Choices <span className="hint">Select the correct one.</span>
-        </legend>
-        <div className="choice-inputs">
-          {choices.map((c, i) => (
-            <div className="choice-input-row" key={i}>
-              <input
-                type="radio"
-                name="m-answer"
-                checked={answer === i}
-                onChange={() => setAnswer(i)}
-                aria-label={`Choice ${i + 1} is the correct answer`}
-              />
-              <input
-                type="text"
-                lang={lang}
-                value={c}
-                maxLength={300}
-                aria-label={`Choice ${i + 1}`}
-                placeholder={`Choice ${i + 1}`}
-                onChange={(e) => setChoices((cs) => cs.map((x, j) => (j === i ? e.target.value : x)))}
-              />
-              {choices.length > 2 ? (
-                <button
-                  type="button"
-                  className="icon-btn"
-                  aria-label={`Remove choice ${i + 1}`}
-                  onClick={() => {
-                    setChoices((cs) => cs.filter((_, j) => j !== i));
-                    setAnswer((a) => (a === null || a === i ? null : a > i ? a - 1 : a));
-                  }}
-                >
-                  <CloseIcon size={18} />
-                </button>
-              ) : (
-                <span />
-              )}
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-          {choices.length < 8 && (
-            <button type="button" className="btn small secondary" onClick={() => setChoices((cs) => [...cs, ''])}>
-              Add a choice
-            </button>
-          )}
-          <button type="button" className="btn small ghost" onClick={truefalse}>
-            Use X / ✓
-          </button>
-        </div>
-      </fieldset>
-      {state.kind === 'error' && (
-        <div className="notice error" role="alert">
-          <p>{state.message}</p>
-        </div>
-      )}
-      <div className="sticky-bar">
-        <button type="submit" className="btn" disabled={!valid || state.kind === 'sending'}>
-          {state.kind === 'sending' ? 'Saving…' : answer === null ? 'Select the correct choice' : 'Publish'}
         </button>
       </div>
     </form>

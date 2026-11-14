@@ -1859,3 +1859,6 @@ h1.qcard-text {
     padding: 16px 0;
   }
 }
+.dropzone {
+  margin-top: 16px;
+}
