@@ -95,6 +95,9 @@ function uploadWithProgress(
   });
 }
 
+/** How long a finished upload's message stays on screen. */
+const TOAST_MS = 6000;
+
 let nextId = 1;
 
 export default function UploadApp({ turnstileSiteKey }: { turnstileSiteKey?: string | null }) {
@@ -248,9 +251,36 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
     patch(item.id, { status: 'queued', message: undefined, progress: 0 });
   };
   const remove = (item: Item) => {
+    const t = toastTimers.current.get(item.id);
+    if (t) clearTimeout(t);
+    toastTimers.current.delete(item.id);
     URL.revokeObjectURL(item.thumbUrl);
     setItems((list) => list.filter((it) => it.id !== item.id));
   };
+
+  // Finished uploads show as toasts and clear themselves.
+  const toastTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    for (const it of items) {
+      if ((it.status === 'done' || it.status === 'info') && !toastTimers.current.has(it.id)) {
+        toastTimers.current.set(
+          it.id,
+          setTimeout(() => {
+            toastTimers.current.delete(it.id);
+            URL.revokeObjectURL(it.thumbUrl);
+            setItems((list) => list.filter((x) => x.id !== it.id));
+          }, TOAST_MS),
+        );
+      }
+    }
+  }, [items]);
+  useEffect(() => {
+    const timers = toastTimers.current;
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, []);
+  const isToast = (it: Item) => it.status === 'done' || it.status === 'info';
+  const queue = items.filter((it) => !isToast(it));
+  const toasts = items.filter(isToast);
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -316,9 +346,31 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
         </div>
       )}
 
-      {items.length > 0 && (
+      {toasts.length > 0 && (
+        <div className="toasts" role="status" aria-live="polite">
+          {toasts.map((it) => (
+            <div key={it.id} className={`toast${it.status === 'done' ? ' is-done' : ''}`}>
+              <img className="queue-thumb" src={it.thumbUrl} alt="" width={30} height={42} />
+              <span className="toast-text">
+                {it.message}
+                {it.link && (
+                  <>
+                    {' '}
+                    <a href={it.link.href}>{it.link.label}</a>
+                  </>
+                )}
+              </span>
+              <button type="button" className="icon-btn" style={{ margin: 0 }} onClick={() => remove(it)} aria-label="Dismiss">
+                <CloseIcon size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {queue.length > 0 && (
         <ul className="queue" aria-label="Your screenshots">
-          {items.map((it) => (
+          {queue.map((it) => (
             <li key={it.id} className={`queue-item${it === current ? ' is-current' : ''}`}>
               <img className="queue-thumb" src={it.thumbUrl} alt="" width={44} height={60} />
               <div style={{ minWidth: 0 }}>
