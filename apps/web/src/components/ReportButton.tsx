@@ -21,7 +21,7 @@ export default function ReportButton({ questionId }: { questionId: number }) {
     setState({ kind: 'sending' });
     const res = await postJson('/api/reports', { questionId, reason, note: note.trim() || null });
     if (res.ok) setState({ kind: 'sent' });
-    else setState({ kind: 'error', message: res.data?.error ?? 'Could not send the report. Please try again.' });
+    else setState({ kind: 'error', message: res.data?.error ?? 'Could not send. Try again.' });
   }
 
   return (
@@ -41,7 +41,7 @@ export default function ReportButton({ questionId }: { questionId: number }) {
       </button>
       <dialog ref={dialogRef} className="modal" aria-labelledby="report-title">
         <div className="modal-head">
-          <h2 id="report-title">Report this question</h2>
+          <h2 id="report-title">Report a problem</h2>
           <button type="button" className="icon-btn" onClick={close} aria-label="Close">
             <CloseIcon />
           </button>
@@ -49,7 +49,7 @@ export default function ReportButton({ questionId }: { questionId: number }) {
         {state.kind === 'sent' ? (
           <>
             <div className="notice success" role="status">
-              <p>Thanks. Your report was sent for review.</p>
+              <p>Report sent.</p>
             </div>
             <div className="modal-actions">
               <button type="button" className="btn" onClick={close}>
@@ -70,7 +70,7 @@ export default function ReportButton({ questionId }: { questionId: number }) {
             </fieldset>
             <div className="field">
               <label htmlFor="report-note">
-                Note <span className="hint">Optional. For a wrong answer, tell us the right one.</span>
+                Note <span className="hint">Optional. If the answer is wrong, what is the right one?</span>
               </label>
               <textarea id="report-note" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
             </div>

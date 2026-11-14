@@ -108,7 +108,7 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
                   update('', lang);
                 }
               }}
-              placeholder="Search any word in the question"
+              placeholder="Search questions"
               inputMode="search"
               enterKeyHint="search"
               autoComplete="off"
@@ -201,11 +201,11 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
         <div className="empty">
           <p>
             {entries.length === 0
-              ? 'No questions yet. Be the first to add one.'
-              : 'No question matches that. If you are looking at it right now, add it for the next person.'}
+              ? 'No questions yet.'
+              : 'No match.'}
           </p>
           <a className="btn" href="/upload">
-            Upload a screenshot
+            Add a screenshot
           </a>
         </div>
       )}

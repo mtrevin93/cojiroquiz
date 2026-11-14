@@ -2,7 +2,7 @@ import type { QuestionDTO } from '@cojiro/shared';
 import { oneLine } from './text.ts';
 
 export const SITE_NAME = 'Cojiro Quiz';
-export const SITE_TAGLINE = 'Searchable answers for the Ocarina of Time companion app quizzes';
+export const SITE_TAGLINE = 'Answers to the Zelda Notes Ocarina of Time quiz';
 
 export function websiteJsonLd(siteUrl: string) {
   return {

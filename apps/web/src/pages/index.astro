@@ -22,7 +22,7 @@ const initialLang = pickInitialLang(
 const matchCount = q ? filterEntries(entries, q, initialLang || null).length : entries.length;
 
 const title = q ? `“${oneLine(q, 40)}”: ${matchCount} ${matchCount === 1 ? 'answer' : 'answers'}` : undefined;
-const description = `${SITE_TAGLINE}. ${entries.length} questions with answers so far. Type any word from the question to find it; anyone can add a screenshot.`;
+const description = `${SITE_TAGLINE}. Search ${entries.length} questions by any word.`;
 
 // The default language comes from Accept-Language, so shared caches must not mix variants.
 Astro.response.headers.set('Vary', 'Accept-Language');
@@ -31,15 +31,14 @@ Astro.response.headers.set('Vary', 'Accept-Language');
 <Base title={title} description={description} canonicalPath="/" noindex={q !== ''} jsonLd={[websiteJsonLd(env.siteUrl)]}>
   <div class="wrap">
     <div class="hero">
-      <p class="eyebrow">Ocarina of Time quiz answers</p>
-      <h1>Every quiz answer, <em>one search away</em></h1>
-      <p class="hero-sub">Type any word from the question on your screen. Not here yet? <a href="/upload">Add a screenshot</a> for the next player.</p>
+      <h1>Ocarina of Time <em>quiz answers</em></h1>
+      <p class="hero-sub">Missing a question? <a href="/upload">Add a screenshot</a>.</p>
     </div>
     <SearchApp client:load entries={entries} languages={languages} initialQuery={q} initialLang={initialLang} />
     {
       levels.length > 0 && (
         <nav class="browse" aria-label="Browse by level">
-          <h2 class="browse-title">Browse by level</h2>
+          <h2 class="browse-title">Levels</h2>
           <ul class="level-chips">
             {levels.map((l) => (
               <li>

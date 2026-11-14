@@ -324,7 +324,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
 
       // 2. per-visitor rate limit
       if (!takeRateToken(db, 'upload', meta.ipHash, uploadsPerHour, HOUR, now())) {
-        return { status: 'rate_limited', message: 'Too many uploads. Please try again in a little while.' };
+        return { status: 'rate_limited', message: 'Too many uploads. Try again later.' };
       }
 
       // 3. identical file seen before?
@@ -339,7 +339,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
 
       // 4. global parse budget
       if (countRateEvents(db, 'parse', null, now() - 24 * HOUR) >= dailyParseCap) {
-        return { status: 'cap_reached', message: 'The site has reached its daily upload limit. Please try again tomorrow.' };
+        return { status: 'cap_reached', message: 'Daily limit reached. Try again tomorrow.' };
       }
 
       // 5. normalize the image
@@ -347,7 +347,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
       try {
         image = await processScreenshot(file.bytes, maxImageEdge);
       } catch {
-        return { status: 'invalid_file', message: 'The image could not be read.' };
+        return { status: 'invalid_file', message: 'Not a usable image.' };
       }
 
       // 6. parse
@@ -361,7 +361,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
         console.error('[ingest] parser failed:', err instanceof Error ? err.message : err);
         return {
           status: 'parser_unavailable',
-          message: 'We could not read screenshots just now. Please try again in a few minutes.',
+          message: "Can't read screenshots right now. Try again in a few minutes.",
         };
       }
 
@@ -466,7 +466,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
     async submitManual(input, meta) {
       const candidate = manualCandidate(input, meta, null);
       if (!takeRateToken(db, 'upload', meta.ipHash, uploadsPerHour, HOUR, now())) {
-        throw new IngestError('rate_limited', 'Too many submissions. Please try again in a little while.');
+        throw new IngestError('rate_limited', 'Too many uploads. Try again later.');
       }
       return db.transaction((tx) => insertOrMerge(tx, candidate, now()));
     },

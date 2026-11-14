@@ -115,7 +115,7 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
       <div className="qcard-answer">
         <AnswerBox label={entry.answerLabel} choiceImageUrl={entry.answerChoiceImageUrl} lang={entry.lang} />
         {entry.answerImageUrl && (
-          <a className="reveal-shot" href={href} title="Result screenshot: open the question page to see it full size">
+          <a className="reveal-shot" href={href} title="Result screenshot">
             <img
               src={entry.answerImageUrl}
               alt={`Screenshot showing the correct answer “${entry.answerLabel}” to: ${oneLine(entry.questionText, 90)}`}

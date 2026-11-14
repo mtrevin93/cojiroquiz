@@ -40,6 +40,6 @@ export const POST: APIRoute = async (ctx) => {
     return json(result, STATUS_CODES[result.status] ?? 200);
   } catch (err) {
     console.error('[api/uploads]', err);
-    return errorJson(500, 'Something went wrong reading that screenshot. Please try again.');
+    return errorJson(500, 'Could not read that screenshot. Try again.');
   }
 };

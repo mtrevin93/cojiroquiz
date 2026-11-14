@@ -7,7 +7,7 @@ import { postJson, TURNSTILE_HEADER, useTurnstile } from './useTurnstile.tsx';
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_EDGE = 1600;
-const QUARANTINED_MESSAGE = "We couldn't read this one. It's been sent for review.";
+const QUARANTINED_MESSAGE = "Couldn't read this one. Sent for review.";
 const COMMON_LANGS = ['en', 'ja', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ko', 'zh', 'ru'];
 
 type ItemStatus = 'queued' | 'preparing' | 'uploading' | 'reading' | 'review' | 'confirming' | 'done' | 'info' | 'error';
@@ -30,8 +30,8 @@ const STATUS_TEXT: Record<ItemStatus, string> = {
   queued: 'Waiting',
   preparing: 'Preparing…',
   uploading: 'Uploading…',
-  reading: 'Reading the screenshot…',
-  review: 'Ready for you to check',
+  reading: 'Reading…',
+  review: 'Ready to check',
   confirming: 'Saving…',
   done: 'Added',
   info: '',
@@ -88,8 +88,8 @@ function uploadWithProgress(
       }
       resolve({ status: xhr.status, data });
     };
-    xhr.onerror = () => resolve({ status: 0, data: { error: 'Network error. Check your connection and try again.' } });
-    xhr.ontimeout = () => resolve({ status: 0, data: { error: 'The upload timed out. Try again.' } });
+    xhr.onerror = () => resolve({ status: 0, data: { error: 'Network error. Try again.' } });
+    xhr.ontimeout = () => resolve({ status: 0, data: { error: 'Upload timed out. Try again.' } });
     xhr.timeout = 120_000;
     const form = new FormData();
     form.append('file', blob, name);
@@ -183,7 +183,7 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
         patch(next.id, { status: 'preparing' });
         const blob = await downscale(next.file);
         if (blob.size > MAX_BYTES) {
-          patch(next.id, { status: 'error', message: 'This image is larger than 8 MB.' });
+          patch(next.id, { status: 'error', message: 'Image is over 8 MB.' });
           return;
         }
         const token = await takeToken();
@@ -205,27 +205,27 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
           case 'duplicate_file':
             patch(next.id, {
               status: 'done',
-              message: 'We already have this exact screenshot.',
-              link: { href: questionPath(body.question.slug), label: 'See the question' },
+              message: 'Already have this screenshot.',
+              link: { href: questionPath(body.question.slug), label: 'View' },
             });
             break;
           case 'quarantined':
             patch(next.id, { status: 'info', message: QUARANTINED_MESSAGE });
             break;
           case 'rate_limited':
-            patch(next.id, { status: 'error', message: body.message || 'Too many uploads. Please wait a bit and try again.' });
-            setPaused('Uploads are paused because of the rate limit.');
+            patch(next.id, { status: 'error', message: body.message || 'Too many uploads. Try again later.' });
+            setPaused('Uploads paused: too many at once.');
             break;
           case 'cap_reached':
-            patch(next.id, { status: 'error', message: body.message || 'The site has hit its daily reading limit. Try again tomorrow.' });
-            setPaused('Uploads are paused: the daily limit was reached.');
+            patch(next.id, { status: 'error', message: body.message || 'Daily limit reached. Try again tomorrow.' });
+            setPaused('Uploads paused: daily limit reached.');
             break;
           case 'parser_unavailable':
-            patch(next.id, { status: 'error', message: body.message || 'Screenshots cannot be read right now. Try again in a few minutes.' });
-            setPaused('Uploads are paused: the screenshot reader is unavailable right now.');
+            patch(next.id, { status: 'error', message: body.message || "Can't read screenshots right now. Try again in a few minutes." });
+            setPaused("Uploads paused: can't read screenshots right now.");
             break;
           case 'invalid_file':
-            patch(next.id, { status: 'error', message: body.message || 'That file is not a usable image.' });
+            patch(next.id, { status: 'error', message: body.message || 'Not a usable image.' });
             break;
         }
       } finally {
@@ -249,13 +249,13 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
         status: 'done',
         message: r.merged
           ? r.disputed
-            ? 'Added your vote. Uploads disagree on this answer, so it is marked disputed.'
-            : 'We already had this one. Your upload confirmed the answer.'
-          : 'Published. Thank you!',
-        link: { href: questionPath(r.slug), label: 'See the question' },
+            ? 'Vote added. Uploads disagree, so the answer is marked disputed.'
+            : 'Already had this one. Answer confirmed.'
+          : 'Published.',
+        link: { href: questionPath(r.slug), label: 'View' },
       });
     } else {
-      patch(item.id, { status: 'review', message: res.data?.error ?? 'Could not save. Please try again.' });
+      patch(item.id, { status: 'review', message: res.data?.error ?? 'Could not save. Try again.' });
     }
   }
 
@@ -302,8 +302,8 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
         <label htmlFor="shot-files" className="btn" style={{ marginBottom: 0 }}>
           {items.length ? 'Add more screenshots' : 'Choose screenshots'}
         </label>
-        <p className="muted">You can pick several at once. Each one is read, then you confirm the answer.</p>
-        <p className="muted desktop-only">Or drag images here, or paste one with Ctrl/⌘+V.</p>
+        <p className="muted">Pick one or several.</p>
+        <p className="muted desktop-only">Or drag and drop, or paste.</p>
       </div>
 
       {paused && (
@@ -327,7 +327,7 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
             position={items.indexOf(current) + 1}
             total={items.length}
             onConfirm={(input) => confirm(current, input)}
-            onSkip={() => patch(current.id, { status: 'info', message: 'Skipped. Nothing was published.' })}
+            onSkip={() => patch(current.id, { status: 'info', message: 'Skipped.' })}
           />
         </div>
       )}
@@ -428,15 +428,15 @@ function Review({
       {draft.duplicateOf && (
         <div className="notice">
           <p>
-            <strong>We already have this one.</strong> Current answer: <strong lang={lang}>{draft.duplicateOf.answerLabel}</strong>.{' '}
-            <a href={questionPath(draft.duplicateOf.slug)}>See it</a>
+            <strong>Already have this one.</strong> Current answer: <strong lang={lang}>{draft.duplicateOf.answerLabel}</strong>.{' '}
+            <a href={questionPath(draft.duplicateOf.slug)}>View</a>
           </p>
-          <p className="muted">Confirming still helps: it counts as another vote for the answer.</p>
+          <p className="muted">Confirming adds a vote for the answer.</p>
         </div>
       )}
       {lowConfidence && (
         <div className="notice">
-          <p>This screenshot was hard to read. Please check the text and choices below before confirming.</p>
+          <p>Hard to read. Check the text and choices.</p>
         </div>
       )}
       {item.message && (
@@ -469,7 +469,7 @@ function Review({
           <fieldset className="pick-list">
             <legend>
               {draft.detectedAnswerIndex !== null
-                ? 'We read the correct answer from the screenshot. Is it right?'
+                ? 'Answer read from the screenshot. Correct?'
                 : 'Tap the correct answer'}
             </legend>
             {draft.choices.map((c, i) => (
@@ -512,7 +512,7 @@ function Review({
 
       <p style={{ margin: '10px 0 0' }}>
         <button type="button" className="link-btn" aria-expanded={editChoices} onClick={() => setEditChoices((v) => !v)}>
-          {editChoices ? 'Done fixing choices' : 'A choice was read wrong? Fix the text'}
+          {editChoices ? 'Done' : 'Fix a choice'}
         </button>
       </p>
       {editChoices && (
@@ -540,7 +540,7 @@ function Review({
           Skip
         </button>
         <button type="submit" className="btn" disabled={saving || answer === null || !text.trim()}>
-          {saving ? 'Saving…' : answer === null ? 'Tap the correct answer' : 'Confirm and publish'}
+          {saving ? 'Saving…' : answer === null ? 'Tap the correct answer' : 'Publish'}
         </button>
       </div>
     </form>
@@ -586,7 +586,7 @@ function ManualTab({ takeToken }: { takeToken: () => Promise<string | null> }) {
       setChoices(['', '']);
       setAnswer(null);
     } else {
-      setState({ kind: 'error', message: res.data?.error ?? 'Could not save. Please try again.' });
+      setState({ kind: 'error', message: res.data?.error ?? 'Could not save. Try again.' });
     }
   }
 
@@ -600,14 +600,14 @@ function ManualTab({ takeToken }: { takeToken: () => Promise<string | null> }) {
       {state.kind === 'done' && (
         <div className="notice success" role="status">
           <p>
-            {state.result.merged ? 'We already had this one. Your answer was counted.' : 'Published. Thank you!'}{' '}
-            <a href={questionPath(state.result.slug)}>See the question</a>
+            {state.result.merged ? 'Already had this one. Answer counted.' : 'Published.'}{' '}
+            <a href={questionPath(state.result.slug)}>View</a>
           </p>
         </div>
       )}
       <div className="field">
         <label htmlFor="m-text">
-          Question <span className="hint">Exactly as shown in the app, including line breaks.</span>
+          Question <span className="hint">Exactly as shown.</span>
         </label>
         <textarea id="m-text" lang={lang} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} required spellCheck={false} />
       </div>
@@ -629,7 +629,7 @@ function ManualTab({ takeToken }: { takeToken: () => Promise<string | null> }) {
       </div>
       <fieldset className="pick-list field">
         <legend>
-          Choices <span className="hint">Type each choice, then select the correct one.</span>
+          Choices <span className="hint">Select the correct one.</span>
         </legend>
         <div className="choice-inputs">
           {choices.map((c, i) => (
@@ -686,7 +686,7 @@ function ManualTab({ takeToken }: { takeToken: () => Promise<string | null> }) {
       )}
       <div className="sticky-bar">
         <button type="submit" className="btn" disabled={!valid || state.kind === 'sending'}>
-          {state.kind === 'sending' ? 'Saving…' : answer === null ? 'Select the correct choice' : 'Publish question'}
+          {state.kind === 'sending' ? 'Saving…' : answer === null ? 'Select the correct choice' : 'Publish'}
         </button>
       </div>
     </form>

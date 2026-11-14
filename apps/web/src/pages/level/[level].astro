@@ -15,7 +15,7 @@ if (levelPath(level.value) !== `/level/${encodeURIComponent(param)}`) return Ast
 const entries = buildSearchIndex(db, urlFor, { level: level.value });
 const langs = new Set(entries.map((e) => e.lang));
 const title = `${level.value} quiz answers`;
-const description = `All ${entries.length} known ${level.value} quiz questions with their correct answers.`;
+const description = `${level.value} quiz answers: ${entries.length} ${entries.length === 1 ? 'question' : 'questions'}.`;
 ---
 
 <Base title={title} description={description} canonicalPath={levelPath(level.value)}>
@@ -24,7 +24,7 @@ const description = `All ${entries.length} known ${level.value} quiz questions w
       <nav class="crumbs" aria-label="Breadcrumb"><a href="/">All questions</a></nav>
       <h1>{level.value} <span class="muted">answers</span></h1>
       <p class="muted" style="margin:0">
-        {entries.length} {entries.length === 1 ? 'question' : 'questions'}. <a href="/">Search all levels</a>
+        {entries.length} {entries.length === 1 ? 'question' : 'questions'}
       </p>
     </div>
     <ul class="card-grid">

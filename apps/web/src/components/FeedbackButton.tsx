@@ -29,7 +29,7 @@ export default function FeedbackButton({ turnstileSiteKey }: { turnstileSiteKey?
       setState({ kind: 'sent' });
       setMessage('');
     } else {
-      setState({ kind: 'error', message: res.data?.error ?? 'Something went wrong. Please try again.' });
+      setState({ kind: 'error', message: res.data?.error ?? 'Could not send. Try again.' });
     }
   }
 
@@ -40,7 +40,7 @@ export default function FeedbackButton({ turnstileSiteKey }: { turnstileSiteKey?
       </button>
       <dialog ref={dialogRef} className="modal" aria-labelledby="feedback-title" onClose={() => setOpen(false)}>
         <div className="modal-head">
-          <h2 id="feedback-title">Send feedback</h2>
+          <h2 id="feedback-title">Feedback</h2>
           <button type="button" className="icon-btn" onClick={close} aria-label="Close">
             <CloseIcon />
           </button>
@@ -48,7 +48,7 @@ export default function FeedbackButton({ turnstileSiteKey }: { turnstileSiteKey?
         {state.kind === 'sent' ? (
           <>
             <div className="notice success" role="status">
-              <p>Thanks! Your message was sent.</p>
+              <p>Sent.</p>
             </div>
             <div className="modal-actions">
               <button type="button" className="btn" onClick={close}>
@@ -66,12 +66,12 @@ export default function FeedbackButton({ turnstileSiteKey }: { turnstileSiteKey?
                 maxLength={4000}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="A wrong answer, a bug, an idea…"
+                placeholder=""
               />
             </div>
             <div className="field">
               <label htmlFor="fb-contact">
-                Your email <span className="hint">Optional. Only used to reply to you.</span>
+                Your email <span className="hint">Optional, for a reply.</span>
               </label>
               <input
                 id="fb-contact"

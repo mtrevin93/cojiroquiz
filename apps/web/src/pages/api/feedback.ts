@@ -24,7 +24,7 @@ export const POST: APIRoute = async (ctx) => {
   const db = getDb();
   const ipHash = ipHashOf(ctx);
   if (!rateLimit(db, 'feedback', ipHash, LIMITS.feedback)) {
-    return errorJson(429, 'Too many messages from you in the last hour. Please try again later.');
+    return errorJson(429, 'Too many messages. Try again later.');
   }
 
   // Store first so nothing is lost if the email fails.

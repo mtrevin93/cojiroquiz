@@ -11,7 +11,7 @@ export const POST: APIRoute = async (ctx) => {
   const db = getDb();
   const ipHash = ipHashOf(ctx);
   if (!rateLimit(db, 'report', ipHash, LIMITS.report)) {
-    return errorJson(429, 'Too many reports from you in the last hour. Please try again later.');
+    return errorJson(429, 'Too many reports. Try again later.');
   }
   const result = createReport(db, { questionId: input.questionId, reason: input.reason, note: input.note ?? null, ipHash });
   if (!result) return errorJson(404, 'That question no longer exists.');

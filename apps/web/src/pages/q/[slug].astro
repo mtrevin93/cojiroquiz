@@ -67,7 +67,7 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
         {q.disputed && (
           <div class="qcard-meta">
             <span class="tag disputed">Disputed answer</span>
-            <span class="muted">Uploads or reports disagree about this one. Double-check before trusting it.</span>
+            <span class="muted">Uploads or reports disagree on this answer.</span>
           </div>
         )}
         <h2 class="section-label">All choices</h2>
@@ -102,8 +102,8 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
         <dd>{q.submissionCount}</dd>
       </div>
       <div>
-        <dt>Answer from</dt>
-        <dd>{q.answerSource === 'reveal' ? 'the in-game result screen' : 'an uploader'}</dd>
+        <dt>Source</dt>
+        <dd>{q.answerSource === 'reveal' ? 'result screenshot' : 'uploader'}</dd>
       </div>
     </dl>
 
@@ -121,7 +121,7 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
                 decoding="async"
               />
             </a>
-            <figcaption>The question as shown in the app</figcaption>
+            <figcaption>Question</figcaption>
           </figure>
         )}
         {q.answerImage && (
@@ -136,7 +136,7 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
                 decoding="async"
               />
             </a>
-            <figcaption>The result screen: gold marks the correct answer</figcaption>
+            <figcaption>Result: gold marks the correct answer</figcaption>
           </figure>
         )}
       </div>

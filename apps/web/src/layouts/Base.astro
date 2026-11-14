@@ -23,7 +23,7 @@ interface Props {
 const env = getEnv();
 const {
   title,
-  description = `${SITE_TAGLINE}. Search by any word in the question; anyone can add a screenshot.`,
+  description = `${SITE_TAGLINE}. Search by any word in the question.`,
   canonicalPath = Astro.url.pathname,
   noindex = false,
   ogImage = null,
@@ -96,14 +96,11 @@ const path = Astro.url.pathname;
       <div class="wrap">
         <div class="footer-links">
           <a href="/">Search</a>
-          <a href="/upload">Upload a question</a>
+          <a href="/upload">Upload</a>
           <a href="/about">About</a>
           <FeedbackButton client:idle turnstileSiteKey={env.turnstileSiteKey} />
         </div>
-        <p>
-          {SITE_NAME} is an unofficial fan site. It is not affiliated with, endorsed by, or sponsored by Nintendo.
-          The Legend of Zelda and Ocarina of Time are trademarks of Nintendo. Answers are crowdsourced and may be wrong.
-        </p>
+        <p>Unofficial fan site, not affiliated with Nintendo. Answers are crowdsourced and may be wrong.</p>
       </div>
     </footer>
   </body>

@@ -17,6 +17,6 @@ export const POST: APIRoute = async (ctx) => {
     const known = ingestErrorResponse(err);
     if (known) return known;
     console.error('[api/questions]', err);
-    return errorJson(500, 'Could not save the question. Please try again.');
+    return errorJson(500, 'Could not save. Try again.');
   }
 };

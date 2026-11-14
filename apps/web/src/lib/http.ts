@@ -69,5 +69,5 @@ export async function requireTurnstile(ctx: APIContext): Promise<Response | null
     ctx.request.headers.get(TURNSTILE_HEADER),
     clientIp(ctx),
   );
-  return ok ? null : errorJson(403, 'Verification failed. Please complete the challenge and try again.');
+  return ok ? null : errorJson(403, 'Verification failed. Try again.');
 }
