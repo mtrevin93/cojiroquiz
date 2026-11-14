@@ -48,7 +48,11 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
       ctx.cookies.set(ADMIN_COOKIE, adminCookieValue(env.adminToken!), {
         httpOnly: true,
         secure: true,
-        sameSite: 'strict',
+        // Lax, not strict: a strict cookie is withheld when you arrive from another site,
+        // so the review links in report emails would show "Not found" even when logged in.
+        // Admin actions are POSTs, which lax cookies are not sent with cross-site, and the
+        // same-origin check above covers them as well.
+        sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 30,
       });
