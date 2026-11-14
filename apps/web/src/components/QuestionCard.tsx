@@ -28,7 +28,7 @@ export function QuestionText({ text }: { text: string }) {
     <>
       {lines.map((line, i) =>
         NOTE_LINE.test(line) ? (
-          <span className="notes" key={i} aria-label={line}>
+          <span className="notes" key={i} role="img" aria-label={line}>
             {line.split(/\s+/).map((ch, j) => (
               <span className="note" key={j} aria-hidden="true">
                 {ch}

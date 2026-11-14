@@ -6,7 +6,7 @@ import '../styles/global.css';
 import FeedbackButton from '../components/FeedbackButton.tsx';
 import { getEnv } from '../lib/env.ts';
 import { safeJsonLd } from '../lib/security.ts';
-import { SITE_NAME, SITE_TAGLINE } from '../lib/seo.ts';
+import { HOME_TITLE, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '../lib/seo.ts';
 
 interface Props {
   title?: string;
@@ -23,7 +23,7 @@ interface Props {
 const env = getEnv();
 const {
   title,
-  description = `${SITE_TAGLINE}. Search by any word in the question.`,
+  description = SITE_DESCRIPTION,
   canonicalPath = Astro.url.pathname,
   noindex = false,
   ogImage = null,
@@ -31,7 +31,7 @@ const {
   jsonLd = [],
 } = Astro.props;
 
-const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME}: ${SITE_TAGLINE}`;
+const fullTitle = title ? `${title} | ${SITE_NAME}` : HOME_TITLE;
 const canonical = env.siteUrl + canonicalPath;
 const absolute = (u: string) => (/^https?:\/\//.test(u) ? u : env.siteUrl + u);
 const image = absolute(ogImage ?? '/og.png');
@@ -100,7 +100,10 @@ const path = Astro.url.pathname;
           <a href="/about">About</a>
           <FeedbackButton client:idle turnstileSiteKey={env.turnstileSiteKey} />
         </div>
-        <p>Unofficial fan site, not affiliated with Nintendo. Answers are crowdsourced and may be wrong.</p>
+        <p>
+          Answers to the Ocarina of Time Quiz in Zelda Notes. Unofficial fan site, not affiliated with Nintendo. Answers
+          are crowdsourced and may be wrong.
+        </p>
       </div>
     </footer>
   </body>

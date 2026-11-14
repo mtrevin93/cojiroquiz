@@ -20,6 +20,12 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   const { request, url } = ctx;
   const path = url.pathname;
 
+  // One canonical host: www.cojiroquiz.com -> cojiroquiz.com
+  const reqHost = (request.headers.get('host') ?? '').toLowerCase();
+  if (reqHost.startsWith('www.') && SAFE_METHODS.has(request.method)) {
+    return Response.redirect(`https://${reqHost.slice(4)}${path}${url.search}`, 301);
+  }
+
   // State-changing requests must come from this site.
   if (!SAFE_METHODS.has(request.method)) {
     const host = request.headers.get('host');

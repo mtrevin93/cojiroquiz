@@ -5,7 +5,7 @@ import { AnswerBox, QuestionText, questionPath } from '../../components/Question
 import ReportButton from '../../components/ReportButton.tsx';
 import Base from '../../layouts/Base.astro';
 import { isAdminRequest, pageContext } from '../../lib/page.ts';
-import { qaPageJsonLd } from '../../lib/seo.ts';
+import { answerWords, qaPageJsonLd } from '../../lib/seo.ts';
 import { langName, oneLine } from '../../lib/text.ts';
 
 const { db, urlFor, env } = await pageContext();
@@ -23,8 +23,8 @@ if (!q || (q.hidden && !admin)) return Astro.rewrite('/404');
 const answer = q.choices[q.answerIndex];
 const answerText = choiceText(answer);
 const short = oneLine(q.questionText, 70);
-const title = `${short} Answer: ${oneLine(answerText, 30)}`;
-const description = `Answer: ${answerText}. Quiz question: ${oneLine(q.questionText, 150)}`;
+const title = `${short} Answer: ${oneLine(answerWords(answerText), 30)}`;
+const description = `Answer: ${answerWords(answerText)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
 const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
 ---
 
@@ -104,7 +104,8 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
                 alt={`Screenshot of the result screen showing the correct answer “${answerText}” to: ${oneLine(q.questionText, 110)}`}
                 width={q.answerImage.width || undefined}
                 height={q.answerImage.height || undefined}
-                loading="lazy"
+                loading="eager"
+                fetchpriority="high"
                 decoding="async"
               />
             </a>
