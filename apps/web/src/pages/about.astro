@@ -1,0 +1,50 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="About"
+  description="Cojiro Quiz is an unofficial, crowdsourced answer key for the Ocarina of Time companion app quizzes. How it works and how to contribute."
+>
+  <div class="wrap narrow prose">
+    <h1>About Cojiro Quiz</h1>
+    <p>
+      Cojiro Quiz is a searchable answer key for the quizzes in the Ocarina of Time companion app. The quiz is timed,
+      so the site is built to be quick: type a word or two from the question and the answer is right there.
+    </p>
+    <p>
+      Every question comes from players. Questions are stored exactly as the app shows them, in whatever language they
+      were shown in, and are never translated.
+    </p>
+
+    <h2>How to contribute</h2>
+    <ol>
+      <li>Take a screenshot of a quiz question. The result screen (after you answer) is best, because it shows which choice was correct.</li>
+      <li>Open <a href="/upload">Upload</a> and choose the screenshot. You can pick several at once.</li>
+      <li>Check the text the site read from it. If the screenshot does not show the result, tap the correct answer.</li>
+      <li>Confirm. It is published straight away and anyone can find it.</li>
+    </ol>
+    <p>No screenshot? Use the “Type it in” tab on the upload page. There are no accounts and nothing to sign up for.</p>
+
+    <h2>Wrong answers</h2>
+    <p>
+      Answers are crowdsourced, so some will be wrong. Every question page has a “Report a problem” button. When
+      uploads disagree about an answer, the question is marked as disputed until it is sorted out.
+    </p>
+
+    <h2>Privacy</h2>
+    <p>
+      There is no login and no tracking profile. To limit abuse the site keeps a salted hash of your IP address next to
+      uploads and reports; the address itself is not stored. Screenshots you upload are cropped and published, so do
+      not upload anything personal.
+    </p>
+
+    <h2>Unofficial fan site</h2>
+    <p>
+      Cojiro Quiz is a fan project. It is not affiliated with, endorsed by, or sponsored by Nintendo. The Legend of
+      Zelda and Ocarina of Time are trademarks of Nintendo. The site uses no official logos or artwork; screenshots are
+      contributed by players for reference.
+    </p>
+    <p>Questions or takedown requests: use the Feedback link at the bottom of any page.</p>
+  </div>
+</Base>

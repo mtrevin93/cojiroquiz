@@ -1,0 +1,12 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "noUncheckedIndexedAccess": true,
+    "types": ["node"],
+    "paths": { "@cojiro/shared/normalize": ["../../packages/shared/src/normalize.ts"] }
+  },
+  "include": [".astro/types.d.ts", "src", "scripts", "test", "astro.config.ts"],
+  "exclude": ["dist"]
+}

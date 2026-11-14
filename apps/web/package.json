@@ -1,0 +1,38 @@
+{
+  "name": "@cojiro/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "start": "node ./dist/server/entry.mjs",
+    "typecheck": "astro check",
+    "test": "vitest run --passWithNoTests",
+    "seed": "node scripts/seed.ts",
+    "seed:reset": "node scripts/seed.ts --reset"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.13",
+    "@astrojs/react": "^7.1.9",
+    "@cojiro/db": "workspace:*",
+    "@cojiro/ingest": "workspace:*",
+    "@cojiro/shared": "workspace:*",
+    "@cojiro/storage": "workspace:*",
+    "@fontsource-variable/noto-sans": "^5.2.10",
+    "astro": "^7.4.12",
+    "better-sqlite3": "^13.2.0",
+    "drizzle-orm": "^0.45.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "resend": "^6.38.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

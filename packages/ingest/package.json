@@ -1,0 +1,10 @@
+{
+  "name": "@cojiro/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json", "test": "vitest run --passWithNoTests" },
+  "dependencies": { "@cojiro/shared": "workspace:*", "@cojiro/db": "workspace:*", "@cojiro/storage": "workspace:*", "@anthropic-ai/sdk": "^1.8.0", "sharp": "^0.35.5", "zod": "^4.6.7" },
+  "devDependencies": {}
+}

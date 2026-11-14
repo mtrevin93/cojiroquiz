@@ -1,0 +1,19 @@
+{
+  "name": "cojiroquiz",
+  "private": true,
+  "packageManager": "pnpm@12.18.0",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @cojiro/db generate"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.11",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0",
+    "@types/node": "^24.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "isQuizScreenshot": true,
+  "rejectReason": null,
+  "lang": "en",
+  "level": "Cucco Level",
+  "questionNumber": 1,
+  "questionText": "When playing the ocarina in\nNormal mode, which note is\nassigned to the Y Button?",
+  "choices": [
+    { "label": "B", "kind": "text", "description": null, "box": { "x": 0.039, "y": 0.619, "w": 0.922, "h": 0.076 } },
+    { "label": "E", "kind": "text", "description": null, "box": { "x": 0.039, "y": 0.707, "w": 0.922, "h": 0.076 } },
+    { "label": "G", "kind": "text", "description": null, "box": { "x": 0.039, "y": 0.796, "w": 0.922, "h": 0.076 } },
+    { "label": "C", "kind": "text", "description": null, "box": { "x": 0.039, "y": 0.885, "w": 0.922, "h": 0.076 } }
+  ],
+  "reveal": { "present": false, "correctIndex": null, "selectedIndex": null },
+  "confidence": "high"
+}

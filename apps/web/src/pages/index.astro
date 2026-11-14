@@ -1,0 +1,54 @@
+---
+import { buildSearchIndex, filterEntries, listLanguages, listLevels } from '@cojiro/db';
+import { levelPath } from '../components/QuestionCard.tsx';
+import SearchApp from '../components/SearchApp.tsx';
+import Base from '../layouts/Base.astro';
+import { pageContext, pickInitialLang } from '../lib/page.ts';
+import { SITE_TAGLINE, websiteJsonLd } from '../lib/seo.ts';
+import { oneLine } from '../lib/text.ts';
+
+const { db, urlFor, env } = await pageContext();
+const entries = buildSearchIndex(db, urlFor);
+const languages = listLanguages(db);
+const levels = listLevels(db);
+
+const q = (Astro.url.searchParams.get('q') ?? '').slice(0, 200);
+const langParam = Astro.url.searchParams.get('lang');
+const initialLang = pickInitialLang(
+  langParam,
+  Astro.request.headers.get('accept-language'),
+  languages.map((l) => l.value),
+);
+const matchCount = q ? filterEntries(entries, q, initialLang || null).length : entries.length;
+
+const title = q ? `“${oneLine(q, 40)}”: ${matchCount} ${matchCount === 1 ? 'answer' : 'answers'}` : undefined;
+const description = `${SITE_TAGLINE}. ${entries.length} questions with answers so far. Type any word from the question to find it; anyone can add a screenshot.`;
+
+// The default language comes from Accept-Language, so shared caches must not mix variants.
+Astro.response.headers.set('Vary', 'Accept-Language');
+---
+
+<Base title={title} description={description} canonicalPath="/" noindex={q !== ''} jsonLd={[websiteJsonLd(env.siteUrl)]}>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Quiz answers, fast</h1>
+      <p>Type any word from the question. Missing? <a href="/upload">Upload a screenshot</a>.</p>
+    </div>
+    <SearchApp client:load entries={entries} languages={languages} initialQuery={q} initialLang={initialLang} />
+    {
+      levels.length > 0 && (
+        <nav aria-label="Browse by level">
+          <ul class="level-chips">
+            {levels.map((l) => (
+              <li>
+                <a class="chip" href={levelPath(l.value)}>
+                  {l.value} <span>{l.count}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+  </div>
+</Base>

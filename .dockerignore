@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.astro
+**/.turbo
+.git
+.env
+.env.*
+data
+fixtures
+*.md

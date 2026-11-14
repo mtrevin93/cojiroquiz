@@ -1,0 +1,43 @@
+---
+import { buildSearchIndex, listLevels } from '@cojiro/db';
+import QuestionCard, { levelPath } from '../../components/QuestionCard.tsx';
+import Base from '../../layouts/Base.astro';
+import { pageContext } from '../../lib/page.ts';
+import { slugify } from '../../lib/text.ts';
+
+const { db, urlFor } = await pageContext();
+const param = Astro.params.level ?? '';
+const levels = listLevels(db);
+const level = levels.find((l) => slugify(l.value) === param) ?? levels.find((l) => l.value === param);
+if (!level) return Astro.rewrite('/404');
+if (levelPath(level.value) !== `/level/${encodeURIComponent(param)}`) return Astro.redirect(levelPath(level.value), 301);
+
+const entries = buildSearchIndex(db, urlFor, { level: level.value });
+const langs = new Set(entries.map((e) => e.lang));
+const title = `${level.value} quiz answers`;
+const description = `All ${entries.length} known ${level.value} quiz questions with their correct answers.`;
+---
+
+<Base title={title} description={description} canonicalPath={levelPath(level.value)}>
+  <div class="wrap">
+    <div class="page-head">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">All questions</a></nav>
+      <h1>{level.value} <span class="muted">answers</span></h1>
+      <p class="muted" style="margin:0">
+        {entries.length} {entries.length === 1 ? 'question' : 'questions'}. <a href="/">Search all levels</a>
+      </p>
+    </div>
+    <ul class="card-grid">
+      {entries.map((e) => (
+        <li><QuestionCard entry={e} showLang={langs.size > 1} /></li>
+      ))}
+    </ul>
+    <nav aria-label="Other levels">
+      <ul class="level-chips">
+        {levels.filter((l) => l.value !== level.value).map((l) => (
+          <li><a class="chip" href={levelPath(l.value)}>{l.value} <span>{l.count}</span></a></li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</Base>

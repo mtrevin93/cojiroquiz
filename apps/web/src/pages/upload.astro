@@ -1,0 +1,25 @@
+---
+import UploadApp from '../components/UploadApp.tsx';
+import Base from '../layouts/Base.astro';
+import { getEnv } from '../lib/env.ts';
+
+const env = getEnv();
+---
+
+<Base
+  title="Upload a quiz question"
+  description="Add a quiz question to Cojiro Quiz: upload a screenshot or type it in. No account needed."
+  noindex
+>
+  <div class="wrap narrow">
+    <div class="page-head" style="padding-bottom:0">
+      <h1>Add a question</h1>
+      <p class="muted" style="margin:0">
+        Screenshot the question in the app (the result screen is best: it shows the right answer), then add it here. No
+        account needed.
+      </p>
+    </div>
+    <UploadApp client:load turnstileSiteKey={env.turnstileSiteKey} />
+    <noscript><div class="notice error"><p>Uploading needs JavaScript turned on.</p></div></noscript>
+  </div>
+</Base>

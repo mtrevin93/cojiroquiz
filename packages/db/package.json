@@ -1,0 +1,10 @@
+{
+  "name": "@cojiro/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json", "test": "vitest run --passWithNoTests", "generate": "drizzle-kit generate" },
+  "dependencies": { "@cojiro/shared": "workspace:*", "better-sqlite3": "^13.2.0", "drizzle-orm": "^0.45.4" },
+  "devDependencies": { "@types/better-sqlite3": "latest", "drizzle-kit": "latest" }
+}

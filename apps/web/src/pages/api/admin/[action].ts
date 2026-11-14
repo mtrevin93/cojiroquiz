@@ -1,0 +1,114 @@
+import type { APIRoute } from 'astro';
+import { ManualInput } from '@cojiro/shared';
+import { getQuarantine } from '@cojiro/db';
+import { ipHashOf } from '../../../lib/http.ts';
+import {
+  deleteQuarantine,
+  deleteQuestion,
+  editQuestion,
+  resolveReport,
+  setQuarantineFixture,
+  setQuarantineStatus,
+  setQuestionDisputed,
+  setQuestionHidden,
+} from '../../../lib/mutations.ts';
+import { getDb, getIngest, getStore, UPLOADS_UNAVAILABLE } from '../../../lib/services.ts';
+
+/**
+ * Admin actions. POST only, form-encoded, gated by the admin cookie in
+ * src/middleware.ts (which also enforces same-origin). Redirects back to /admin.
+ */
+export const POST: APIRoute = async (ctx) => {
+  const db = getDb();
+  const action = ctx.params.action ?? '';
+  let form: FormData;
+  try {
+    form = await ctx.request.formData();
+  } catch {
+    return new Response('Bad request', { status: 400 });
+  }
+  const str = (k: string) => {
+    const v = form.get(k);
+    return typeof v === 'string' ? v : '';
+  };
+  const id = Number(str('id'));
+  const back = (section: string, msg: string, error = false) =>
+    ctx.redirect(`/admin?${error ? 'error' : 'msg'}=${encodeURIComponent(msg)}#${section}`, 303);
+  if (!Number.isSafeInteger(id) || id <= 0) return back('top', 'Missing id.', true);
+
+  switch (action) {
+    case 'report-resolve':
+      resolveReport(db, id);
+      return back('reports', `Report #${id} resolved.`);
+    case 'question-hide':
+      setQuestionHidden(db, id, true);
+      return back(str('section') || 'questions', `Question #${id} hidden.`);
+    case 'question-unhide':
+      setQuestionHidden(db, id, false);
+      return back(str('section') || 'questions', `Question #${id} is visible again.`);
+    case 'question-undispute':
+      setQuestionDisputed(db, id, false);
+      return back('questions', `Question #${id} is no longer marked disputed.`);
+    case 'question-delete':
+      deleteQuestion(db, id);
+      return back('questions', `Question #${id} deleted.`);
+    case 'question-edit': {
+      const answerIndex = Number(str('answerIndex'));
+      const res = editQuestion(db, id, {
+        questionText: str('questionText').replace(/\r\n/g, '\n').trim() || undefined,
+        lang: str('lang').trim() || undefined,
+        level: str('level').trim() || null,
+        answerIndex: Number.isInteger(answerIndex) ? answerIndex : undefined,
+      });
+      return res.ok ? back('questions', `Question #${id} updated.`) : back('questions', res.error, true);
+    }
+    case 'quarantine-dismiss':
+      setQuarantineStatus(db, id, 'dismissed');
+      return back('quarantine', `Upload #${id} dismissed.`);
+    case 'quarantine-fixture': {
+      const on = str('value') !== '0';
+      setQuarantineFixture(db, id, on);
+      return back('quarantine', on ? `Upload #${id} flagged as a fixture.` : `Fixture flag removed from #${id}.`);
+    }
+    case 'quarantine-delete': {
+      const key = deleteQuarantine(db, id);
+      if (key) {
+        try {
+          await (await getStore()).delete('private', key);
+        } catch (err) {
+          console.error('[admin] could not delete quarantine blob', err);
+        }
+      }
+      return back('quarantine', `Upload #${id} deleted.`);
+    }
+    case 'quarantine-promote': {
+      if (!getQuarantine(db, id)) return back('quarantine', 'That upload no longer exists.', true);
+      const choiceLabels = str('choiceLabels')
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const parsed = ManualInput.safeParse({
+        lang: str('lang').trim(),
+        level: str('level').trim() || null,
+        questionText: str('questionText').replace(/\r\n/g, '\n').trim(),
+        choiceLabels,
+        answerIndex: Number(str('answerNumber')) - 1,
+      });
+      if (!parsed.success || parsed.data.answerIndex >= choiceLabels.length) {
+        return back('quarantine', `Could not promote #${id}: check the text, choices and answer number.`, true);
+      }
+      const ingest = await getIngest();
+      if (!ingest) return back('quarantine', UPLOADS_UNAVAILABLE, true);
+      try {
+        const res = await ingest.promoteQuarantined(id, parsed.data, { ipHash: ipHashOf(ctx) });
+        return back('quarantine', `Upload #${id} published as question #${res.questionId}${res.merged ? ' (merged)' : ''}.`);
+      } catch (err) {
+        if (err instanceof Error && err.name === 'IngestError') return back('quarantine', `Could not promote #${id}: ${err.message}`, true);
+        console.error('[admin] promote failed', err);
+        return back('quarantine', `Could not promote #${id}.`, true);
+      }
+    }
+    default:
+      return new Response('Not found', { status: 404 });
+  }
+};

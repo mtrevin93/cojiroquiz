@@ -1,0 +1,70 @@
+import { defineMiddleware } from 'astro:middleware';
+import { getEnv } from './lib/env.ts';
+import { ADMIN_COOKIE, adminCookieValue, isAdminCookie, isAdminToken, isSameOrigin } from './lib/security.ts';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+function withSecurityHeaders(res: Response): Response {
+  try {
+    res.headers.set('X-Content-Type-Options', 'nosniff');
+    res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.headers.set('X-Frame-Options', 'DENY');
+  } catch {
+    /* immutable headers (e.g. redirects): leave as is */
+  }
+  return res;
+}
+
+export const onRequest = defineMiddleware(async (ctx, next) => {
+  const env = getEnv();
+  const { request, url } = ctx;
+  const path = url.pathname;
+
+  // State-changing requests must come from this site.
+  if (!SAFE_METHODS.has(request.method)) {
+    const host = request.headers.get('host');
+    const allowed = [env.siteUrl, url.origin, host ? `http://${host}` : null, host ? `https://${host}` : null];
+    if (!isSameOrigin(request.headers.get('origin'), allowed)) {
+      return withSecurityHeaders(
+        new Response(JSON.stringify({ error: 'Cross-origin request refused.' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+        }),
+      );
+    }
+  }
+
+  // Admin area: 404 unless the token (once, via ?token=) or the session cookie is valid.
+  const isAdminPath = path === '/admin' || path.startsWith('/admin/') || path.startsWith('/api/admin/');
+  if (isAdminPath) {
+    const token = url.searchParams.get('token');
+    if (token !== null && request.method === 'GET' && isAdminToken(token, env.adminToken)) {
+      ctx.cookies.set(ADMIN_COOKIE, adminCookieValue(env.adminToken!), {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+      const clean = new URL(url);
+      clean.searchParams.delete('token');
+      return withSecurityHeaders(ctx.redirect(clean.pathname + clean.search, 303));
+    }
+    if (!isAdminCookie(ctx.cookies.get(ADMIN_COOKIE)?.value, env.adminToken)) {
+      // Same response as any unknown URL.
+      return withSecurityHeaders(await ctx.rewrite('/404'));
+    }
+    ctx.locals.isAdmin = true;
+  }
+
+  const res = await next();
+  if (isAdminPath) {
+    try {
+      res.headers.set('Cache-Control', 'private, no-store');
+      res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    } catch {
+      /* ignore */
+    }
+  }
+  return withSecurityHeaders(res);
+});

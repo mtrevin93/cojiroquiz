@@ -1,0 +1,246 @@
+---
+import { choiceText, listFeedback, listQuarantine, listRecentQuestions, listReports } from '@cojiro/db';
+import { questionPath } from '../../components/QuestionCard.tsx';
+import Base from '../../layouts/Base.astro';
+import { formatDate, pageContext } from '../../lib/page.ts';
+import { REPORT_REASON_LABELS } from '../../lib/text.ts';
+
+// Gated by src/middleware.ts; this is a second line of defence.
+if (!Astro.locals.isAdmin) return Astro.rewrite('/404');
+
+const { db, store, urlFor } = await pageContext();
+const reports = listReports(db);
+const quarantine = listQuarantine(db, { limit: 60 }).filter((r) => r.status !== 'promoted');
+const thumbs = new Map<number, string | null>(
+  await Promise.all(
+    quarantine.map(async (r) => {
+      try {
+        return [r.id, await store.signedUrl(r.key, 600)] as [number, string];
+      } catch {
+        return [r.id, null] as [number, null];
+      }
+    }),
+  ),
+);
+const questions = listRecentQuestions(db, urlFor, 60);
+const feedback = listFeedback(db, 100);
+const msg = Astro.url.searchParams.get('msg');
+const error = Astro.url.searchParams.get('error');
+
+/** Best-effort prefill for the Promote form from whatever the parser returned. */
+function prefill(parsed: unknown) {
+  const p = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, any>;
+  const choices: string[] = Array.isArray(p.choices)
+    ? p.choices.map((c: any) => String(c?.label || c?.description || '')).filter(Boolean)
+    : [];
+  const correct = Number.isInteger(p.reveal?.correctIndex) ? p.reveal.correctIndex + 1 : '';
+  return {
+    lang: typeof p.lang === 'string' && p.lang ? p.lang : 'en',
+    level: typeof p.level === 'string' ? p.level : '',
+    questionText: typeof p.questionText === 'string' ? p.questionText : '',
+    choices: choices.join('\n'),
+    answerNumber: correct,
+  };
+}
+---
+
+<Base title="Admin" noindex>
+  <div class="wrap admin" id="top">
+    <h1>Admin</h1>
+    <nav class="admin-nav" aria-label="Sections">
+      <a class="chip" href="#reports">Reports <span>{reports.length}</span></a>
+      <a class="chip" href="#quarantine">Rejected uploads <span>{quarantine.filter((r) => r.status === 'new').length}</span></a>
+      <a class="chip" href="#questions">Recent questions <span>{questions.length}</span></a>
+      <a class="chip" href="#feedback">Feedback <span>{feedback.length}</span></a>
+    </nav>
+    {msg && <div class="notice success" role="status"><p>{msg}</p></div>}
+    {error && <div class="notice error" role="alert"><p>{error}</p></div>}
+
+    <h2 id="reports">Open reports</h2>
+    {reports.length === 0 && <p class="muted">No open reports.</p>}
+    <ul class="admin-list">
+      {reports.map((r) => (
+        <li class="admin-item">
+          <div class="qcard-meta">
+            <span class="tag">{REPORT_REASON_LABELS[r.reason] ?? r.reason}</span>
+            {r.question.hidden && <span class="tag hidden-tag">Hidden</span>}
+            {r.question.disputed && <span class="tag disputed">Disputed</span>}
+          </div>
+          <p class="q"><a href={questionPath(r.question.slug)}>#{r.question.id}</a> {r.question.questionText}</p>
+          {r.note && <p style="margin:0">Note: {r.note}</p>}
+          <div class="meta">Report #{r.id} · {formatDate(r.createdAt)} · reporter {r.ipHash.slice(0, 10)}</div>
+          <div class="admin-actions">
+            <form method="post" action="/api/admin/report-resolve">
+              <input type="hidden" name="id" value={r.id} />
+              <button class="btn small" type="submit">Resolve</button>
+            </form>
+            <form method="post" action={`/api/admin/${r.question.hidden ? 'question-unhide' : 'question-hide'}`}>
+              <input type="hidden" name="id" value={r.question.id} />
+              <input type="hidden" name="section" value="reports" />
+              <button class="btn small secondary" type="submit">{r.question.hidden ? 'Unhide question' : 'Hide question'}</button>
+            </form>
+          </div>
+        </li>
+      ))}
+    </ul>
+
+    <h2 id="quarantine">Rejected uploads</h2>
+    {quarantine.length === 0 && <p class="muted">Nothing in quarantine.</p>}
+    <ul class="admin-list">
+      {quarantine.map((r) => {
+        const thumb = thumbs.get(r.id);
+        const pre = prefill(r.parsed);
+        return (
+          <li class="admin-item quarantine-item">
+            {thumb ? (
+              <a href={thumb} target="_blank" rel="noopener noreferrer">
+                <img src={thumb} alt={`Rejected upload #${r.id}`} width="96" height="160" loading="lazy" decoding="async" />
+              </a>
+            ) : (
+              <span class="muted">No image</span>
+            )}
+            <div>
+              <div class="qcard-meta">
+                <span class="tag">{r.status}</span>
+                {r.fixture && <span class="tag disputed">Fixture</span>}
+              </div>
+              <p class="q">{r.reason}</p>
+              <div class="meta">Upload #{r.id} · {formatDate(r.createdAt)} · uploader {r.ipHash.slice(0, 10)} · sha {r.sha256.slice(0, 12)}</div>
+              <details>
+                <summary>Raw parser output</summary>
+                <pre>{JSON.stringify(r.parsed, null, 2) ?? 'null'}</pre>
+              </details>
+              <details>
+                <summary>Promote (publish by hand)</summary>
+                <form class="admin-form" method="post" action="/api/admin/quarantine-promote">
+                  <input type="hidden" name="id" value={r.id} />
+                  <div>
+                    <label for={`p-text-${r.id}`}>Question text</label>
+                    <textarea id={`p-text-${r.id}`} name="questionText" required maxlength="2000">{pre.questionText}</textarea>
+                  </div>
+                  <div class="review-grid">
+                    <div>
+                      <label for={`p-lang-${r.id}`}>Language (BCP-47)</label>
+                      <input id={`p-lang-${r.id}`} type="text" name="lang" value={pre.lang} required maxlength="16" />
+                    </div>
+                    <div>
+                      <label for={`p-level-${r.id}`}>Level</label>
+                      <input id={`p-level-${r.id}`} type="text" name="level" value={pre.level} maxlength="100" />
+                    </div>
+                  </div>
+                  <div>
+                    <label for={`p-choices-${r.id}`}>Choices, one per line</label>
+                    <textarea id={`p-choices-${r.id}`} name="choiceLabels" required>{pre.choices}</textarea>
+                  </div>
+                  <div>
+                    <label for={`p-answer-${r.id}`}>Correct choice number (1 = first line)</label>
+                    <input id={`p-answer-${r.id}`} type="number" name="answerNumber" min="1" max="8" value={pre.answerNumber} required />
+                  </div>
+                  <button class="btn small" type="submit">Publish</button>
+                </form>
+              </details>
+              <div class="admin-actions">
+                {r.status === 'new' && (
+                  <form method="post" action="/api/admin/quarantine-dismiss">
+                    <input type="hidden" name="id" value={r.id} />
+                    <button class="btn small secondary" type="submit">Dismiss</button>
+                  </form>
+                )}
+                <form method="post" action="/api/admin/quarantine-fixture">
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="value" value={r.fixture ? '0' : '1'} />
+                  <button class="btn small secondary" type="submit">{r.fixture ? 'Unflag fixture' : 'Flag as fixture'}</button>
+                </form>
+                <form method="post" action="/api/admin/quarantine-delete">
+                  <input type="hidden" name="id" value={r.id} />
+                  <button class="btn small danger" type="submit">Delete</button>
+                </form>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+
+    <h2 id="questions">Recent questions</h2>
+    {questions.length === 0 && <p class="muted">No questions yet.</p>}
+    <ul class="admin-list">
+      {questions.map((q) => (
+        <li class="admin-item">
+          <div class="qcard-meta">
+            <span class="tag">{q.lang}</span>
+            {q.level && <span class="tag">{q.level}</span>}
+            {q.hidden && <span class="tag hidden-tag">Hidden</span>}
+            {q.disputed && <span class="tag disputed">Disputed</span>}
+          </div>
+          <p class="q" lang={q.lang}><a href={questionPath(q.slug)}>#{q.id}</a> {q.questionText}</p>
+          <div class="meta">
+            Answer: <strong lang={q.lang}>{choiceText(q.choices[q.answerIndex])}</strong> ({q.answerSource}) · {q.submissionCount}
+            confirmation{q.submissionCount === 1 ? '' : 's'} · {formatDate(q.createdAt)}
+          </div>
+          <details>
+            <summary>Edit text / answer</summary>
+            <form class="admin-form" method="post" action="/api/admin/question-edit">
+              <input type="hidden" name="id" value={q.id} />
+              <div>
+                <label for={`e-text-${q.id}`}>Question text</label>
+                <textarea id={`e-text-${q.id}`} name="questionText" required maxlength="2000" lang={q.lang}>{q.questionText}</textarea>
+              </div>
+              <div class="review-grid">
+                <div>
+                  <label for={`e-lang-${q.id}`}>Language</label>
+                  <input id={`e-lang-${q.id}`} type="text" name="lang" value={q.lang} required maxlength="16" />
+                </div>
+                <div>
+                  <label for={`e-level-${q.id}`}>Level</label>
+                  <input id={`e-level-${q.id}`} type="text" name="level" value={q.level ?? ''} maxlength="100" />
+                </div>
+              </div>
+              <div>
+                <label for={`e-answer-${q.id}`}>Correct answer</label>
+                <select id={`e-answer-${q.id}`} name="answerIndex">
+                  {q.choices.map((c, i) => (
+                    <option value={i} selected={i === q.answerIndex}>{choiceText(c) || `Choice ${i + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+              <button class="btn small" type="submit">Save</button>
+            </form>
+          </details>
+          <div class="admin-actions">
+            <form method="post" action={`/api/admin/${q.hidden ? 'question-unhide' : 'question-hide'}`}>
+              <input type="hidden" name="id" value={q.id} />
+              <button class="btn small secondary" type="submit">{q.hidden ? 'Unhide' : 'Hide'}</button>
+            </form>
+            {q.disputed && (
+              <form method="post" action="/api/admin/question-undispute">
+                <input type="hidden" name="id" value={q.id} />
+                <button class="btn small secondary" type="submit">Clear disputed</button>
+              </form>
+            )}
+            <details>
+              <summary>Delete…</summary>
+              <form method="post" action="/api/admin/question-delete">
+                <input type="hidden" name="id" value={q.id} />
+                <button class="btn small danger" type="submit">Delete question #{q.id} for good</button>
+              </form>
+            </details>
+          </div>
+        </li>
+      ))}
+    </ul>
+
+    <h2 id="feedback">Feedback</h2>
+    {feedback.length === 0 && <p class="muted">No feedback yet.</p>}
+    <ul class="admin-list">
+      {feedback.map((f) => (
+        <li class="admin-item">
+          <p class="q" style="font-weight:500">{f.message}</p>
+          <div class="meta">
+            #{f.id} · {formatDate(f.createdAt)} · {f.contact ? `reply to ${f.contact}` : 'no contact given'} · {f.emailed ? 'emailed' : 'not emailed'}
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Base>

@@ -1,0 +1,150 @@
+---
+import { choiceText, getQuestionById, getQuestionBySlug } from '@cojiro/db';
+import { CheckIcon } from '../../components/icons.tsx';
+import { AnswerBox, levelPath, questionPath } from '../../components/QuestionCard.tsx';
+import ReportButton from '../../components/ReportButton.tsx';
+import Base from '../../layouts/Base.astro';
+import { isAdminRequest, pageContext } from '../../lib/page.ts';
+import { qaPageJsonLd } from '../../lib/seo.ts';
+import { langName, oneLine } from '../../lib/text.ts';
+
+const { db, urlFor, env } = await pageContext();
+const slug = Astro.params.slug ?? '';
+let q = getQuestionBySlug(db, urlFor, slug);
+if (!q) {
+  // Slugs change when an admin fixes the text; the leading id stays stable.
+  const id = Number(/^(\d+)(?:-|$)/.exec(slug)?.[1]);
+  const byId = Number.isSafeInteger(id) ? getQuestionById(db, urlFor, id) : null;
+  if (byId && !byId.hidden) return Astro.redirect(questionPath(byId.slug), 301);
+}
+const admin = isAdminRequest(Astro.cookies);
+if (!q || (q.hidden && !admin)) return Astro.rewrite('/404');
+
+const answer = q.choices[q.answerIndex];
+const answerText = choiceText(answer);
+const short = oneLine(q.questionText, 70);
+const title = `${short} Answer: ${oneLine(answerText, 30)}`;
+const description = `Answer: ${answerText}. Quiz question${q.level ? ` (${q.level})` : ''}: ${oneLine(q.questionText, 150)}`;
+const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
+---
+
+<Base
+  title={title}
+  description={description}
+  canonicalPath={questionPath(q.slug)}
+  noindex={q.hidden}
+  ogImage={ogImage}
+  ogType="article"
+  jsonLd={q.hidden ? [] : [qaPageJsonLd(env.siteUrl, q, answerText)]}
+>
+  <div class="wrap narrow qpage">
+    <div class="page-head">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="/">All questions</a>
+        {q.level && (
+          <>
+            <span aria-hidden="true">/</span>
+            <a href={levelPath(q.level)} lang={q.lang}>{q.level}</a>
+          </>
+        )}
+      </nav>
+      {q.hidden && (
+        <div class="notice error">
+          <p>This question is hidden from visitors. You are seeing it because you are signed in as admin.</p>
+        </div>
+      )}
+    </div>
+
+    <article class="qcard">
+      <header class="qcard-head">
+        <span class="qcard-num">Question <b>{q.id}</b></span>
+        {q.level && <a class="qcard-level" href={levelPath(q.level)} lang={q.lang}>{q.level}</a>}
+      </header>
+      <div class="qcard-body">
+        <h1 class="qcard-text" lang={q.lang}>{q.questionText}</h1>
+      </div>
+      <div class="qcard-foot">
+        <AnswerBox label={answerText} choiceImageUrl={answer?.imageUrl ?? null} lang={q.lang} />
+        {q.disputed && (
+          <div class="qcard-meta">
+            <span class="tag disputed">Disputed answer</span>
+            <span class="muted">Uploads or reports disagree about this one. Double-check before trusting it.</span>
+          </div>
+        )}
+        <h2 class="section-label">All choices</h2>
+        <ol class="choices" lang={q.lang}>
+          {q.choices.map((c, i) => {
+            const right = i === q.answerIndex;
+            return (
+              <li class:list={['choice', 'ornate', right ? 'is-right' : 'is-wrong']}>
+                {right && <CheckIcon />}
+                {c.imageUrl && (
+                  <img class="choice-img" src={c.imageUrl} alt={c.description ?? c.label} width="72" height="72" loading="lazy" decoding="async" />
+                )}
+                <span>
+                  {choiceText(c)}
+                  {c.description && c.label && c.description !== c.label && <span class="choice-desc">{c.description}</span>}
+                  {right && <span class="sr-only"> (correct answer)</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </article>
+
+    <dl class="facts">
+      {q.level && (
+        <div><dt>Level</dt><dd lang={q.lang}>{q.level}</dd></div>
+      )}
+      <div><dt>Language</dt><dd>{langName(q.lang)}</dd></div>
+      <div>
+        <dt>Confirmations</dt>
+        <dd>{q.submissionCount}</dd>
+      </div>
+      <div>
+        <dt>Answer from</dt>
+        <dd>{q.answerSource === 'reveal' ? 'the in-game result screen' : 'an uploader'}</dd>
+      </div>
+    </dl>
+
+    {(q.answerImage || q.questionImage) && (
+      <div class="shots">
+        {q.questionImage && (
+          <figure>
+            <a href={q.questionImage.url}>
+              <img
+                src={q.questionImage.url}
+                alt={`Screenshot of the quiz question: ${oneLine(q.questionText, 140)}`}
+                width={q.questionImage.width || undefined}
+                height={q.questionImage.height || undefined}
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>The question as shown in the app</figcaption>
+          </figure>
+        )}
+        {q.answerImage && (
+          <figure>
+            <a href={q.answerImage.url}>
+              <img
+                src={q.answerImage.url}
+                alt={`Screenshot of the result screen showing the correct answer “${answerText}” to: ${oneLine(q.questionText, 110)}`}
+                width={q.answerImage.width || undefined}
+                height={q.answerImage.height || undefined}
+                loading="lazy"
+                decoding="async"
+              />
+            </a>
+            <figcaption>The result screen: gold marks the correct answer</figcaption>
+          </figure>
+        )}
+      </div>
+    )}
+
+    <div class="report-row">
+      <ReportButton client:visible questionId={q.id} />
+    </div>
+  </div>
+</Base>
