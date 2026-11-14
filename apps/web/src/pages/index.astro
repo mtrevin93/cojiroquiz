@@ -31,13 +31,15 @@ Astro.response.headers.set('Vary', 'Accept-Language');
 <Base title={title} description={description} canonicalPath="/" noindex={q !== ''} jsonLd={[websiteJsonLd(env.siteUrl)]}>
   <div class="wrap">
     <div class="hero">
-      <h1>Quiz answers, fast</h1>
-      <p>Type any word from the question. Missing? <a href="/upload">Upload a screenshot</a>.</p>
+      <p class="eyebrow">Ocarina of Time quiz answers</p>
+      <h1>Every quiz answer, <em>one search away</em></h1>
+      <p class="hero-sub">Type any word from the question on your screen. Not here yet? <a href="/upload">Add a screenshot</a> for the next player.</p>
     </div>
     <SearchApp client:load entries={entries} languages={languages} initialQuery={q} initialLang={initialLang} />
     {
       levels.length > 0 && (
-        <nav aria-label="Browse by level">
+        <nav class="browse" aria-label="Browse by level">
+          <h2 class="browse-title">Browse by level</h2>
           <ul class="level-chips">
             {levels.map((l) => (
               <li>

@@ -29,6 +29,8 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
   const [hydrated, setHydrated] = useState(false);
   const explicitLang = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const multiLang = languages.length > 1;
 
@@ -46,7 +48,16 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
       }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // The search bar gets a backdrop only while it is pinned to the top.
+    const io =
+      sentinelRef.current && 'IntersectionObserver' in window
+        ? new IntersectionObserver(([e]) => setStuck(!!e && !e.isIntersecting && e.boundingClientRect.top < 0))
+        : null;
+    if (io && sentinelRef.current) io.observe(sentinelRef.current);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      io?.disconnect();
+    };
   }, []);
 
   const matches = useMemo(
@@ -66,7 +77,8 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
 
   return (
     <div>
-      <div className="search-sticky">
+      <div ref={sentinelRef} aria-hidden="true" />
+      <div className={stuck ? 'search-sticky is-stuck' : 'search-sticky'}>
         <form
           className="search-form"
           role="search"
@@ -96,7 +108,7 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
                   update('', lang);
                 }
               }}
-              placeholder="Type any word from the question"
+              placeholder="Search any word in the question"
               inputMode="search"
               enterKeyHint="search"
               autoComplete="off"
@@ -186,7 +198,7 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
           ))}
         </ul>
       ) : (
-        <div className="empty ornate">
+        <div className="empty">
           <p>
             {entries.length === 0
               ? 'No questions yet. Be the first to add one.'

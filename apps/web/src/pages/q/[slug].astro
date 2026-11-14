@@ -1,7 +1,7 @@
 ---
 import { choiceText, getQuestionById, getQuestionBySlug } from '@cojiro/db';
 import { CheckIcon } from '../../components/icons.tsx';
-import { AnswerBox, levelPath, questionPath } from '../../components/QuestionCard.tsx';
+import { AnswerBox, QuestionText, levelPath, questionPath } from '../../components/QuestionCard.tsx';
 import ReportButton from '../../components/ReportButton.tsx';
 import Base from '../../layouts/Base.astro';
 import { isAdminRequest, pageContext } from '../../lib/page.ts';
@@ -57,11 +57,10 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
 
     <article class="qcard">
       <header class="qcard-head">
-        <span class="qcard-num">Question <b>{q.id}</b></span>
         {q.level && <a class="qcard-level" href={levelPath(q.level)} lang={q.lang}>{q.level}</a>}
       </header>
       <div class="qcard-body">
-        <h1 class="qcard-text" lang={q.lang}>{q.questionText}</h1>
+        <h1 class="qcard-text" lang={q.lang}><QuestionText text={q.questionText} /></h1>
       </div>
       <div class="qcard-foot">
         <AnswerBox label={answerText} choiceImageUrl={answer?.imageUrl ?? null} lang={q.lang} />

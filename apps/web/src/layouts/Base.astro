@@ -1,5 +1,7 @@
 ---
 import '@fontsource-variable/noto-sans/wght.css';
+import '@fontsource-variable/fraunces/wght.css';
+import '@fontsource-variable/fraunces/wght-italic.css';
 import '../styles/global.css';
 import FeedbackButton from '../components/FeedbackButton.tsx';
 import { getEnv } from '../lib/env.ts';
@@ -69,11 +71,13 @@ const path = Astro.url.pathname;
     <header class="site-header">
       <div class="wrap">
         <a class="wordmark" href="/" aria-label={`${SITE_NAME} home`}>
-          <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
-            <rect x="3" y="3" width="58" height="58" rx="8" fill="#2a1f15" stroke="#8f7430" stroke-width="3"></rect>
-            <path d="M16 34 27 45 49 18" fill="none" stroke="#d2ac45" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
+          <svg class="mark" width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+            <defs><linearGradient id="mk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d27f"></stop><stop offset="1" stop-color="#b98a2f"></stop></linearGradient></defs>
+            <rect x="1" y="1" width="32" height="32" rx="10" fill="#1a130c" stroke="url(#mk)" stroke-opacity=".55"></rect>
+            <path d="M26 7.5C16.5 8 10.2 13.4 9.4 22l-2.6 5.2 1.7.9 2.6-5.1c8.6-.4 14-6 14.9-15.500Z" fill="url(#mk)"></path>
+            <path d="M11.300 21.700 21.500 11.500M14.200 18.800l4.800.2M16.800 16.200l4.200.200" fill="none" stroke="#1a130c" stroke-width="1.2" stroke-linecap="round"></path>
           </svg>
-          <span><b>C</b>ojiro <b>Q</b>uiz</span>
+          <span>Cojiro <em>Quiz</em></span>
         </a>
         <nav class="site-nav" aria-label="Main">
           <a class="nav-optional" href="/" aria-current={path === '/' ? 'page' : undefined}>Search</a>
