@@ -95,24 +95,8 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
       </div>
     </dl>
 
-    {(q.answerImage || q.questionImage) && (
+    {q.answerImage && (
       <div class="shots">
-        {q.questionImage && (
-          <figure>
-            <a href={q.questionImage.url}>
-              <img
-                src={q.questionImage.url}
-                alt={`Screenshot of the quiz question: ${oneLine(q.questionText, 140)}`}
-                width={q.questionImage.width || undefined}
-                height={q.questionImage.height || undefined}
-                loading="lazy"
-                decoding="async"
-              />
-            </a>
-            <figcaption>Question</figcaption>
-          </figure>
-        )}
-        {q.answerImage && (
           <figure>
             <a href={q.answerImage.url}>
               <img
@@ -124,9 +108,8 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
                 decoding="async"
               />
             </a>
-            <figcaption>Result: gold marks the correct answer</figcaption>
+            <figcaption>Result screenshot</figcaption>
           </figure>
-        )}
       </div>
     )}
 

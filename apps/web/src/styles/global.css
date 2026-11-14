@@ -1862,3 +1862,13 @@ h1.qcard-text {
 .dropzone {
   margin-top: 16px;
 }
+.shots {
+  display: block;
+}
+.shots figure {
+  max-width: 220px;
+}
+.shots img {
+  border-color: var(--line-strong);
+  border-radius: 12px;
+}
