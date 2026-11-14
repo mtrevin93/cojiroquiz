@@ -521,3 +521,26 @@ describe('slugify', () => {
     expect(long.length).toBeLessThanOrEqual(60);
   });
 });
+
+describe('admin-locked answers', () => {
+  it('later uploads count as confirmations but cannot change a locked answer', async () => {
+    const png_ = { mimeType: 'image/png' };
+    const a = await png();
+    parser.set(a, quiz());
+    const d = draftOf(await ingest.processUpload({ bytes: a, ...png_ }, ip(1)));
+    const first = await ingest.confirmDraft(d.draftId, { answerIndex: 0 }, ip(1));
+    const { questions } = schema;
+    db.update(questions).set({ answerLocked: true }).run();
+
+    for (const n of [2, 3, 4]) {
+      const b = await png();
+      parser.set(b, quiz({ reveal: { present: true, correctIndex: 1, selectedIndex: 0 } }));
+      const dd = draftOf(await ingest.processUpload({ bytes: b, ...png_ }, ip(n)));
+      await ingest.confirmDraft(dd.draftId, { answerIndex: 1 }, ip(n));
+    }
+    const q = question(first.questionId);
+    expect(q.answerIndex).toBe(0);
+    expect(q.submissionCount).toBe(4);
+    expect(q.disputed).toBe(false);
+  });
+});

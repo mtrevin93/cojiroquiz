@@ -70,9 +70,10 @@ function prefill(parsed: unknown) {
           {r.note && <p style="margin:0">Note: {r.note}</p>}
           <div class="meta">Report #{r.id} · {formatDate(r.createdAt)} · reporter {r.ipHash.slice(0, 10)}</div>
           <div class="admin-actions">
+            <a class="btn small" href={`/admin/review/${r.question.id}`}>Review</a>
             <form method="post" action="/api/admin/report-resolve">
               <input type="hidden" name="id" value={r.id} />
-              <button class="btn small" type="submit">Resolve</button>
+              <button class="btn small secondary" type="submit">Resolve</button>
             </form>
             <form method="post" action={`/api/admin/${r.question.hidden ? 'question-unhide' : 'question-hide'}`}>
               <input type="hidden" name="id" value={r.question.id} />

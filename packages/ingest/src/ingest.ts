@@ -171,14 +171,16 @@ function recount(tx: Tx, q: QuestionRow, now: number): boolean {
     }
   }
   let answerIndex = q.choices.findIndex((c) => canonical(choiceText(c)) === winner);
-  if (answerIndex < 0) {
+  // An answer the admin set by hand is final: uploads still count as confirmations
+  // but can no longer change it.
+  if (answerIndex < 0 || q.answerLocked) {
     answerIndex = q.answerIndex;
     winner = current;
   }
 
   const revealVotes = votes.filter((v) => v.answerSource === 'reveal' && v.answerCanonical === winner);
   const answerImageKept = q.answerImageId != null && revealVotes.some((v) => v.imageId === q.answerImageId);
-  const disputed = q.disputed || totals.size > 1;
+  const disputed = q.answerLocked ? q.disputed : q.disputed || totals.size > 1;
   updateQuestion(tx, q.id, {
     answerIndex,
     answerSource: revealVotes.length > 0 ? 'reveal' : 'manual',

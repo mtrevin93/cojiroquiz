@@ -4,7 +4,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { matchesQuery } from '@cojiro/shared';
 import type { QuestionDTO, ReportReason, SearchIndexEntry, StoredChoice } from '@cojiro/shared';
 import type { Db } from './client.ts';
-import { feedback, images, quarantine, questions, reports } from './schema.ts';
+import { feedback, images, quarantine, questions, reports, submissions } from './schema.ts';
 
 /** Maps a key in the public bucket to a URL (normally `BlobStore.publicUrl`). */
 export type UrlFor = (key: string) => string;
@@ -18,6 +18,7 @@ export interface ImageRef {
 /** QuestionDTO plus what pages need beyond the public contract. */
 export interface QuestionView extends QuestionDTO {
   hidden: boolean;
+  answerLocked: boolean;
   questionImage: ImageRef | null;
   answerImage: ImageRef | null;
 }
@@ -99,6 +100,7 @@ function toView(row: Row, urlFor: UrlFor): QuestionView {
     createdAt: q.createdAt,
     updatedAt: q.updatedAt,
     hidden: q.hidden,
+    answerLocked: q.answerLocked,
     questionImage,
     answerImage,
   };
@@ -303,4 +305,44 @@ export type FeedbackRow = typeof feedback.$inferSelect;
 
 export function listFeedback(db: Db, limit = 100): FeedbackRow[] {
   return db.select().from(feedback).orderBy(desc(feedback.createdAt), desc(feedback.id)).limit(limit).all();
+}
+
+/* ---------- admin review ---------- */
+
+export interface EvidenceRow {
+  id: number;
+  answerCanonical: string;
+  answerSource: 'reveal' | 'manual';
+  ipHash: string;
+  createdAt: number;
+  imageUrl: string | null;
+}
+
+/** Every upload behind a question: what each one said the answer was, and its screenshot. */
+export function listEvidence(db: Db, urlFor: UrlFor, questionId: number): EvidenceRow[] {
+  return db
+    .select({
+      id: submissions.id,
+      answerCanonical: submissions.answerCanonical,
+      answerSource: submissions.answerSource,
+      ipHash: submissions.ipHash,
+      createdAt: submissions.createdAt,
+      imageKey: images.key,
+      imageBucket: images.bucket,
+    })
+    .from(submissions)
+    .leftJoin(images, eq(submissions.imageId, images.id))
+    .where(eq(submissions.questionId, questionId))
+    .orderBy(desc(submissions.createdAt))
+    .all()
+    .map(({ imageKey, imageBucket, ...r }) => ({
+      ...r,
+      imageUrl: imageKey && imageBucket === 'public' ? urlFor(imageKey) : null,
+    }));
+}
+
+export type ReportRow = typeof reports.$inferSelect;
+
+export function listReportsForQuestion(db: Db, questionId: number): ReportRow[] {
+  return db.select().from(reports).where(eq(reports.questionId, questionId)).orderBy(desc(reports.createdAt)).all();
 }

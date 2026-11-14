@@ -7,6 +7,8 @@ import {
   deleteQuestion,
   editQuestion,
   resolveReport,
+  resolveReportsForQuestion,
+  setAnswerByAdmin,
   setQuarantineFixture,
   setQuarantineStatus,
   setQuestionDisputed,
@@ -35,11 +37,23 @@ export const POST: APIRoute = async (ctx) => {
   const back = (section: string, msg: string, error = false) =>
     ctx.redirect(`/admin?${error ? 'error' : 'msg'}=${encodeURIComponent(msg)}#${section}`, 303);
   if (!Number.isSafeInteger(id) || id <= 0) return back('top', 'Missing id.', true);
+  const review = (msg: string, error = false) =>
+    ctx.redirect(`/admin/review/${id}?${error ? 'error' : 'msg'}=${encodeURIComponent(msg)}`, 303);
 
   switch (action) {
     case 'report-resolve':
       resolveReport(db, id);
       return back('reports', `Report #${id} resolved.`);
+    case 'review-set-answer': {
+      const res = setAnswerByAdmin(db, id, Number(str('answerIndex')), { unhide: str('unhide') === '1' });
+      return res.ok ? review(`Answer set to ${res.label}. Reports closed.`) : review(res.error, true);
+    }
+    case 'review-dismiss':
+      resolveReportsForQuestion(db, id);
+      return review('Reports closed. Answer unchanged.');
+    case 'review-hide':
+      setQuestionHidden(db, id, str('value') !== '0');
+      return review(str('value') !== '0' ? 'Question hidden.' : 'Question visible.');
     case 'question-hide':
       setQuestionHidden(db, id, true);
       return back(str('section') || 'questions', `Question #${id} hidden.`);

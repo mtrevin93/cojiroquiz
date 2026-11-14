@@ -39,6 +39,8 @@ export const questions = sqliteTable(
     answerImageId: integer('answer_image_id').references(() => images.id),
     submissionCount: integer('submission_count').notNull().default(1),
     disputed: integer('disputed', { mode: 'boolean' }).notNull().default(false),
+    /** Set when the admin has chosen the answer by hand; later uploads no longer change it. */
+    answerLocked: integer('answer_locked', { mode: 'boolean' }).notNull().default(false),
     hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),

@@ -134,3 +134,40 @@ export function deleteQuarantine(db: Db, id: number): string | null {
   const row = db.delete(quarantine).where(eq(quarantine.id, id)).returning({ key: quarantine.key }).get();
   return row?.key ?? null;
 }
+
+/**
+ * Admin decision after reviewing reports and evidence: set the correct answer and lock it,
+ * clear the disputed flag, and close the question's open reports.
+ */
+export function setAnswerByAdmin(
+  db: Db,
+  id: number,
+  answerIndex: number,
+  opts: { unhide?: boolean } = {},
+): { ok: true; label: string } | { ok: false; error: string } {
+  return db.transaction((tx) => {
+    const q = tx.select().from(questions).where(eq(questions.id, id)).get();
+    if (!q) return { ok: false as const, error: 'Question not found.' };
+    const choice = q.choices[answerIndex];
+    if (!Number.isInteger(answerIndex) || !choice) return { ok: false as const, error: 'Pick one of the choices.' };
+    const changed = answerIndex !== q.answerIndex;
+    tx.update(questions)
+      .set({
+        answerIndex,
+        answerLocked: true,
+        disputed: false,
+        // A result screenshot of the old answer would now contradict the page.
+        ...(changed ? { answerImageId: null, answerSource: 'manual' as const } : {}),
+        ...(opts.unhide ? { hidden: false } : {}),
+        updatedAt: Date.now(),
+      })
+      .where(eq(questions.id, id))
+      .run();
+    tx.update(reports).set({ resolved: true }).where(and(eq(reports.questionId, id), eq(reports.resolved, false))).run();
+    return { ok: true as const, label: choice.label || choice.description || `choice ${answerIndex + 1}` };
+  });
+}
+
+export function resolveReportsForQuestion(db: Db, questionId: number): void {
+  db.update(reports).set({ resolved: true }).where(and(eq(reports.questionId, questionId), eq(reports.resolved, false))).run();
+}

@@ -1,0 +1,131 @@
+---
+import { canonical } from '@cojiro/shared';
+import { choiceText, getQuestionById, listEvidence, listReportsForQuestion } from '@cojiro/db';
+import { QuestionText, questionPath } from '../../../components/QuestionCard.tsx';
+import Base from '../../../layouts/Base.astro';
+import { formatDate, pageContext } from '../../../lib/page.ts';
+import { REPORT_REASON_LABELS } from '../../../lib/text.ts';
+
+// Gated by src/middleware.ts; this is a second line of defence.
+if (!Astro.locals.isAdmin) return Astro.rewrite('/404');
+
+const id = Number(Astro.params.id);
+const { db, urlFor } = await pageContext();
+const q = Number.isSafeInteger(id) && id > 0 ? getQuestionById(db, urlFor, id) : null;
+if (!q) return Astro.rewrite('/404');
+
+const reports = listReportsForQuestion(db, id);
+const open = reports.filter((r) => !r.resolved);
+const evidence = listEvidence(db, urlFor, id);
+const msg = Astro.url.searchParams.get('msg');
+const error = Astro.url.searchParams.get('error');
+
+// How many uploads back each choice, and how many of those were read from a result screen.
+const tally = q.choices.map((c) => {
+  const canon = canonical(choiceText(c));
+  const rows = evidence.filter((e) => e.answerCanonical === canon);
+  return { total: rows.length, reveal: rows.filter((e) => e.answerSource === 'reveal').length };
+});
+const labelFor = (canon: string) => {
+  const c = q.choices.find((x) => canonical(choiceText(x)) === canon);
+  return c ? choiceText(c) : canon;
+};
+---
+
+<Base title={`Review #${q.id}`} noindex>
+  <div class="wrap review-page">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/admin#reports">Admin</a>
+      <span aria-hidden="true">/</span>
+      <a href={questionPath(q.slug)}>Question #{q.id}</a>
+    </nav>
+    {msg && <div class="notice success" role="status"><p>{msg}</p></div>}
+    {error && <div class="notice error" role="alert"><p>{error}</p></div>}
+
+    <h1 class="review-q" lang={q.lang}><QuestionText text={q.questionText} /></h1>
+    <div class="qcard-meta">
+      {q.hidden && <span class="tag hidden-tag">Hidden</span>}
+      {q.disputed && <span class="tag disputed">Disputed</span>}
+      {q.answerLocked && <span class="tag">Answer set by you</span>}
+      <span class="tag">{open.length} open {open.length === 1 ? 'report' : 'reports'}</span>
+    </div>
+
+    <form class="review-form" method="post" action="/api/admin/review-set-answer">
+      <input type="hidden" name="id" value={q.id} />
+      <h2>Correct answer</h2>
+      <div class="review-choices" lang={q.lang}>
+        {q.choices.map((c, i) => (
+          <label class="review-choice">
+            <input type="radio" name="answerIndex" value={i} checked={i === q.answerIndex} required />
+            {c.imageUrl && <img src={c.imageUrl} alt="" width="48" height="48" loading="lazy" />}
+            <span class="review-choice-text">
+              {choiceText(c)}
+              {i === q.answerIndex && <span class="review-current">current</span>}
+            </span>
+            <span class="review-votes">
+              {tally[i]!.total} {tally[i]!.total === 1 ? 'upload' : 'uploads'}
+              {tally[i]!.reveal > 0 && `, ${tally[i]!.reveal} from result screen`}
+            </span>
+          </label>
+        ))}
+      </div>
+      {q.hidden && (
+        <label class="review-check">
+          <input type="checkbox" name="unhide" value="1" checked /> Make the question visible again
+        </label>
+      )}
+      <div class="admin-actions">
+        <button class="btn" type="submit">Save answer and close reports</button>
+      </div>
+    </form>
+    <div class="admin-actions">
+      {open.length > 0 && (
+        <form method="post" action="/api/admin/review-dismiss">
+          <input type="hidden" name="id" value={q.id} />
+          <button class="btn small secondary" type="submit">Close reports, keep answer</button>
+        </form>
+      )}
+      <form method="post" action="/api/admin/review-hide">
+        <input type="hidden" name="id" value={q.id} />
+        <input type="hidden" name="value" value={q.hidden ? '0' : '1'} />
+        <button class="btn small secondary" type="submit">{q.hidden ? 'Unhide question' : 'Hide question'}</button>
+      </form>
+    </div>
+
+    <h2>Reports</h2>
+    {reports.length === 0 && <p class="muted">No reports.</p>}
+    <ul class="admin-list">
+      {reports.map((r) => (
+        <li class="admin-item">
+          <div class="qcard-meta">
+            <span class="tag">{REPORT_REASON_LABELS[r.reason] ?? r.reason}</span>
+            {r.resolved && <span class="tag">Closed</span>}
+          </div>
+          {r.note ? <p class="review-note">{r.note}</p> : <p class="muted" style="margin:0">No note.</p>}
+          <div class="meta">{formatDate(r.createdAt)} · reporter {r.ipHash.slice(0, 10)}</div>
+        </li>
+      ))}
+    </ul>
+
+    <h2>Evidence</h2>
+    {evidence.length === 0 && <p class="muted">No uploads on record.</p>}
+    <ul class="evidence">
+      {evidence.map((e) => (
+        <li>
+          {e.imageUrl ? (
+            <a href={e.imageUrl} target="_blank" rel="noopener noreferrer">
+              <img src={e.imageUrl} alt={`Uploaded screenshot, upload #${e.id}`} loading="lazy" decoding="async" />
+            </a>
+          ) : (
+            <div class="evidence-none">No screenshot</div>
+          )}
+          <p class="evidence-answer" lang={q.lang}>{labelFor(e.answerCanonical)}</p>
+          <div class="meta">
+            {e.answerSource === 'reveal' ? 'Read from result screen' : 'Picked by uploader'}<br />
+            {formatDate(e.createdAt)} · {e.ipHash.slice(0, 10)}
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Base>
