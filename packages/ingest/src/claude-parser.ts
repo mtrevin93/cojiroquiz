@@ -25,7 +25,7 @@ The game exists in several languages. The layout is the same in all of them.
 
 # Transcription
 
-- Copy the question text exactly as displayed, in its original language and script. Keep the spelling, capitalization, punctuation and spacing between spaced-out letters. Put a "\\n" wherever the text wraps onto a new line on screen. Do not translate, correct, complete or tidy anything, even if it looks like a typo; similar questions differ by a single letter and have opposite answers.
+- Copy the question text exactly as displayed, in its original language and script. Keep the spelling, capitalization, punctuation and spacing between spaced-out letters. Line breaks: when a sentence simply runs out of room and continues on the next line, that is word wrap; join those lines with a single space. Put a "\\n" only where the game starts a separate segment on its own line, such as a row of spaced-out letters or symbols above a sentence, or a new sentence that deliberately begins on a new line. Do not translate, correct, complete or tidy anything, even if it looks like a typo; similar questions differ by a single letter and have opposite answers.
 - level: the header label exactly as displayed (for example "Egg Level"), or null if it is not visible.
 - questionNumber: the N from "Question N", or null.
 - lang: the BCP-47 tag of the language the quiz text is written in (for example "en", "ja", "es", "pt-BR"). Judge it from the question text and header, not from the phone's status bar.

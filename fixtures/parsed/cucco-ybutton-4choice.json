@@ -4,7 +4,7 @@
   "lang": "en",
   "level": "Cucco Level",
   "questionNumber": 1,
-  "questionText": "When playing the ocarina in\nNormal mode, which note is\nassigned to the Y Button?",
+  "questionText": "When playing the ocarina in Normal mode, which note is assigned to the Y Button?",
   "choices": [
     { "label": "B", "kind": "text", "description": null, "box": { "x": 0.039, "y": 0.619, "w": 0.922, "h": 0.076 } },
     { "label": "E", "kind": "text", "description": null, "box": { "x": 0.039, "y": 0.707, "w": 0.922, "h": 0.076 } },
