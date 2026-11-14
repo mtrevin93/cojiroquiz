@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { listLevels, listSitemapEntries } from '@cojiro/db';
-import { levelPath, questionPath } from '../components/QuestionCard.tsx';
+import { listSitemapEntries } from '@cojiro/db';
+import { questionPath } from '../components/QuestionCard.tsx';
 import { getEnv } from '../lib/env.ts';
 import { getDb } from '../lib/services.ts';
 
@@ -12,7 +12,6 @@ export const GET: APIRoute = () => {
   const urls: Array<{ loc: string; lastmod?: number }> = [
     { loc: '/' },
     { loc: '/about' },
-    ...listLevels(db).map((l) => ({ loc: levelPath(l.value) })),
     ...listSitemapEntries(db).map((q) => ({ loc: questionPath(q.slug), lastmod: q.updatedAt })),
   ];
   const body =

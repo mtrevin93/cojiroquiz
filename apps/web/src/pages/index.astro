@@ -1,6 +1,5 @@
 ---
-import { buildSearchIndex, filterEntries, listLanguages, listLevels } from '@cojiro/db';
-import { levelPath } from '../components/QuestionCard.tsx';
+import { buildSearchIndex, filterEntries, listLanguages } from '@cojiro/db';
 import SearchApp from '../components/SearchApp.tsx';
 import Base from '../layouts/Base.astro';
 import { pageContext, pickInitialLang } from '../lib/page.ts';
@@ -10,7 +9,6 @@ import { oneLine } from '../lib/text.ts';
 const { db, urlFor, env } = await pageContext();
 const entries = buildSearchIndex(db, urlFor);
 const languages = listLanguages(db);
-const levels = listLevels(db);
 
 const q = (Astro.url.searchParams.get('q') ?? '').slice(0, 200);
 const langParam = Astro.url.searchParams.get('lang');
@@ -30,26 +28,7 @@ Astro.response.headers.set('Vary', 'Accept-Language');
 
 <Base title={title} description={description} canonicalPath="/" noindex={q !== ''} jsonLd={[websiteJsonLd(env.siteUrl)]}>
   <div class="wrap">
-    <div class="hero">
-      <h1>Ocarina of Time <em>quiz answers</em></h1>
-      <p class="hero-sub">Missing a question? <a href="/upload">Add a screenshot</a>.</p>
-    </div>
+    <h1 class="sr-only">Ocarina of Time quiz answers</h1>
     <SearchApp client:load entries={entries} languages={languages} initialQuery={q} initialLang={initialLang} />
-    {
-      levels.length > 0 && (
-        <nav class="browse" aria-label="Browse by level">
-          <h2 class="browse-title">Levels</h2>
-          <ul class="level-chips">
-            {levels.map((l) => (
-              <li>
-                <a class="chip" href={levelPath(l.value)}>
-                  {l.value} <span>{l.count}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )
-    }
   </div>
 </Base>

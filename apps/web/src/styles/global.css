@@ -1798,3 +1798,7 @@ h1.qcard-text {
   height: 24px;
   color: inherit;
 }
+/* home is just the search bar and the results */
+.search-sticky {
+  margin-top: clamp(14px, 4vw, 40px);
+}

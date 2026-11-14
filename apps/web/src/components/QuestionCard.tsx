@@ -81,20 +81,15 @@ export function AnswerBox({
   );
 }
 
-/** Result card: level, the question verbatim, then the answer. The whole card links to the question page. */
+/** Result card: the question verbatim, then the answer. The whole card links to the question page. */
 export default function QuestionCard({ entry, showLang = true }: { entry: CardEntry; showLang?: boolean }) {
   const href = questionPath(entry.slug);
   const w = entry.answerImageWidth || undefined;
   const h = entry.answerImageHeight || undefined;
   return (
     <article className="qcard">
-      {(entry.level || showLang || entry.disputed) && (
+      {(showLang || entry.disputed) && (
         <div className="qcard-top">
-          {entry.level && (
-            <a className="qcard-level" href={levelPath(entry.level)} lang={entry.lang}>
-              {entry.level}
-            </a>
-          )}
           {entry.disputed && (
             <span className="tag disputed" title="Uploads or reports disagree about this answer">
               Disputed
