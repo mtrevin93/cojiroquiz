@@ -1802,3 +1802,60 @@ h1.qcard-text {
 .search-sticky {
   margin-top: clamp(14px, 4vw, 40px);
 }
+
+/* ---------- about ---------- */
+
+.about {
+  max-width: 680px;
+  padding-top: clamp(28px, 6vw, 64px);
+}
+.about h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.9rem, 5vw, 2.5rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.about-lede {
+  margin: 0 0 clamp(24px, 5vw, 40px);
+  color: #d9ceb6;
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.about-list {
+  margin: 0;
+}
+.about-list > div {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 6px 28px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.about-list dt {
+  padding-top: 4px;
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.about-list dd {
+  margin: 0;
+  color: #c4b89f;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.about-list a {
+  color: var(--text);
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .about-list > div {
+    grid-template-columns: 1fr;
+    padding: 16px 0;
+  }
+}

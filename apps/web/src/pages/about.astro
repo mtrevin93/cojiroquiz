@@ -6,34 +6,39 @@ import Base from '../layouts/Base.astro';
   title="About"
   description="About Cojiro Quiz, an unofficial answer key for the Zelda Notes Ocarina of Time quiz."
 >
-  <div class="wrap narrow prose">
+  <div class="wrap about">
     <h1>About</h1>
-    <p>
-      Answers to the Ocarina of Time quiz in Zelda Notes, added by players. Questions are stored exactly as the app
-      shows them, in any language.
-    </p>
-
-    <h2>Add a question</h2>
-    <ol>
-      <li>Screenshot the question. The result screen is best: it shows the correct answer.</li>
-      <li><a href="/upload">Upload</a> it.</li>
-      <li>Check the text and confirm the answer.</li>
-    </ol>
-    <p>No screenshot? Type it in on the upload page. No account needed.</p>
-
-    <h2>Wrong answers</h2>
-    <p>Use “Report a problem” on the question's page. When uploads disagree, the answer is marked disputed.</p>
-
-    <h2>Privacy</h2>
-    <p>
-      No accounts, no tracking. A salted hash of your IP address is kept with uploads and reports to limit abuse.
-      Uploaded screenshots are public.
-    </p>
-
-    <h2>Unofficial</h2>
-    <p>
-      A fan project, not affiliated with Nintendo. The Legend of Zelda and Ocarina of Time are trademarks of Nintendo.
-      Contact or takedown requests: use Feedback below.
-    </p>
+    <p class="about-lede">Answers to the Ocarina of Time quiz in Zelda Notes, added by players.</p>
+    <dl class="about-list">
+      <div>
+        <dt>Add a question</dt>
+        <dd>
+          <a href="/upload">Upload</a> a screenshot of the question. The result screen is best: it shows the correct
+          answer. No screenshot? Type it in.
+        </dd>
+      </div>
+      <div>
+        <dt>Wrong answer</dt>
+        <dd>Use “Report a problem” on the question's page.</dd>
+      </div>
+      <div>
+        <dt>Privacy</dt>
+        <dd>
+          No accounts, no tracking. A salted hash of your IP address is kept with uploads and reports to limit abuse.
+          Uploaded screenshots are public.
+        </dd>
+      </div>
+      <div>
+        <dt>Unofficial</dt>
+        <dd>
+          Fan project, not affiliated with Nintendo. The Legend of Zelda and Ocarina of Time are trademarks of
+          Nintendo.
+        </dd>
+      </div>
+      <div>
+        <dt>Contact</dt>
+        <dd>Use Feedback at the bottom of the page.</dd>
+      </div>
+    </dl>
   </div>
 </Base>
