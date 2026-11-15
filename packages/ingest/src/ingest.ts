@@ -51,7 +51,7 @@ import type { QuizParser } from './parser.ts';
 export interface IngestConfig {
   /** Uploads (and manual submissions) allowed per ipHash per hour. Default 20. */
   uploadsPerHour?: number;
-  /** Parser calls allowed per rolling 24h across everyone. Default 500. */
+  /** Parser calls allowed per rolling 24h across everyone. Default 500; 0 turns the cap off. */
   dailyParseCap?: number;
   /** Default 8 MB. */
   maxUploadBytes?: number;
@@ -446,7 +446,8 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
       if (quarantined) return { status: 'quarantined', reason: publicReason(quarantined.reason) };
 
       // 4. global parse budget
-      if (countRateEvents(db, 'parse', null, now() - 24 * HOUR) >= dailyParseCap) {
+      // A cap of 0 (or less) means no site-wide limit.
+      if (dailyParseCap > 0 && countRateEvents(db, 'parse', null, now() - 24 * HOUR) >= dailyParseCap) {
         return { status: 'cap_reached', message: 'Daily limit reached. Try again tomorrow.' };
       }
 

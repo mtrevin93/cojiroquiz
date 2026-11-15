@@ -615,3 +615,14 @@ describe('questions with pictures', () => {
     expect(question(first.questionId).submissionCount).toBe(2);
   });
 });
+
+describe('parse cap', () => {
+  it('a cap of 0 means no site-wide limit', async () => {
+    ingest = setup({ dailyParseCap: 0, uploadsPerHour: 100 });
+    for (let n = 0; n < 5; n++) {
+      const b = await png();
+      parser.set(b, quiz({ questionText: `Question ${n}?` }));
+      expect((await ingest.processUpload({ bytes: b, mimeType: 'image/png' }, ip(n))).status).toBe('draft');
+    }
+  });
+});

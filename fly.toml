@@ -8,7 +8,8 @@ primary_region = "iad"
   SITE_URL = "https://cojiroquiz.com"
   FEEDBACK_FROM = "feedback@cojiroquiz.com"
   PARSE_MODEL = "claude-sonnet-5-5"
-  DAILY_PARSE_CAP = "500"
+  # 0 = no site-wide cap on screenshot reads per day
+  DAILY_PARSE_CAP = "0"
   AWS_REGION = "auto"
   PUBLIC_IMAGE_BASE_URL = "https://cojiroquiz-images.fly.storage.tigris.dev"
 
