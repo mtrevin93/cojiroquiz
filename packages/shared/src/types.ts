@@ -166,6 +166,8 @@ export interface IngestService {
   processUpload(file: { bytes: Uint8Array; mimeType: string }, meta: RequestMeta): Promise<UploadResult>;
   confirmDraft(draftId: string, input: ConfirmInput, meta: RequestMeta): Promise<ConfirmResult>;
   submitManual(input: ManualInput, meta: RequestMeta): Promise<ConfirmResult>;
+  /** Admin: re-read a question's screenshot and refresh the names of its pictures. Returns false if nothing could be changed. */
+  relabelPictures(questionId: number): Promise<boolean>;
   /** Admin: publish a quarantined upload by hand. */
   promoteQuarantined(quarantineId: number, input: ManualInput, meta: RequestMeta): Promise<ConfirmResult>;
 }

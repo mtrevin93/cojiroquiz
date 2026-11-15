@@ -32,7 +32,7 @@ The game exists in several languages. The layout is the same in all of them.
 
 # Question picture
 
-Some questions show a picture as part of the question, in the dark panel above or below the question text (for example a screenshot of a place above "Where is this?"). When there is one, set questionImage to its bounding box (fractions of the full image, the picture only, without the panel around it) and a short plain description of what it shows, in the quiz's language. When the question is text only, questionImage is null. Pictures inside the choice boxes are choices, not the question picture.
+Some questions show a picture as part of the question, in the dark panel above or below the question text (for example a screenshot of a place above "Where is this?"). When there is one, set questionImage to its bounding box (fractions of the full image, the picture only, without the panel around it) and a description of at most eight words naming its subject (see Naming below), not the scenery around it: "Malon at Lon Lon Ranch", not "a girl with red hair in a white dress standing in a grassy field". When the question is text only, questionImage is null. Pictures inside the choice boxes are choices, not the question picture.
 
 # Choices
 
@@ -40,8 +40,18 @@ List the choices in reading order: top to bottom, and left to right within a row
 
 - kind "symbol": label is "X" or "✓" (use exactly those characters for the cross and the check mark).
 - kind "text": label is the exact text in the box.
-- kind "image": label is a short name for what is pictured, and description is a plain description of it in the same language as the quiz text (for example "bottled fairy"). description is null for symbol and text choices.
+- kind "image": label is the name of what is pictured, one to three words (see Naming below), and description is the same name or a slightly longer one, at most six words, in the same language as the quiz text. description is null for symbol and text choices.
 - box: the bounding box of the whole choice box (its frame, not just the glyph inside) as fractions of the full image: x and y are the top-left corner, w and h the size, all between 0 and 1. Measure against the full image including any status bar.
+
+# Naming pictures
+
+These are pictures from The Legend of Zelda: Ocarina of Time. Name what a picture shows with the game's own term, the way a player would say it, never a generic description or a term from another Zelda game:
+
+- Items: Hookshot (never "clawshot"), Longshot, Megaton Hammer, Fairy Bow, Fairy Slingshot, Boomerang, Bomb, Bombchu, Deku Stick, Deku Nut, Lens of Truth, Ocarina of Time, Fairy Ocarina, Hylian Shield, Deku Shield, Mirror Shield, Master Sword, Kokiri Sword, Biggoron's Sword, Iron Boots, Hover Boots, Goron Tunic, Zora Tunic, Piece of Heart, Heart Container, Gold Skulltula token, rupee (with its colour), bottle contents (Fairy, Poe, Fish, Bug, Blue Fire, Milk).
+- Creatures and characters: Epona (the horse), Cucco (never "rooster" or "chicken"), Navi, Link, Zelda, Sheik, Saria, Malon, Talon, Ingo, Darunia, Ruto, Nabooru, Impa, Mido, Dampé, Ganondorf, Kaepora Gaebora, Skull Kid, Goron, Zora, Gerudo, Deku Scrub, Skulltula, Stalfos, Poe, Like Like.
+- Places: Kokiri Forest, Lost Woods, Sacred Forest Meadow, Hyrule Field, Lon Lon Ranch, Hyrule Castle, Castle Town Market, Temple of Time, Kakariko Village, Graveyard, Death Mountain, Goron City, Zora's River, Zora's Domain, Lake Hylia, Lakeside Laboratory, Gerudo Valley, Gerudo's Fortress, Haunted Wasteland, Desert Colossus, and the dungeons (Deku Tree, Dodongo's Cavern, Jabu-Jabu's Belly, Forest/Fire/Water/Shadow/Spirit Temple, Ice Cavern, Bottom of the Well, Ganon's Castle).
+
+When the choices are several pictures of the same kind of thing (four doors, two houses), the label must say what tells this one apart from the others, in a few words: "door with pots", "house with chests", "house with hearts". Do not describe background scenery. If you cannot tell what something is, say plainly what it looks like in two or three words; never guess a proper name.
 
 # Reveal state
 

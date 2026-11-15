@@ -85,6 +85,12 @@ const labelFor = (canon: string) => {
           <button class="btn small secondary" type="submit">Close reports, keep answer</button>
         </form>
       )}
+      {(q.pictureUrl || q.choices.some((c) => c.kind === 'image')) && (
+        <form method="post" action="/api/admin/question-relabel">
+          <input type="hidden" name="id" value={q.id} />
+          <button class="btn small secondary" type="submit">Re-read picture names</button>
+        </form>
+      )}
       <form method="post" action="/api/admin/review-hide">
         <input type="hidden" name="id" value={q.id} />
         <input type="hidden" name="value" value={q.hidden ? '0' : '1'} />

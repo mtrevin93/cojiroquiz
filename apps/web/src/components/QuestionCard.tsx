@@ -111,7 +111,7 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
         </p>
       </a>
       {entry.choicePictures.length > 0 && (
-        <ul className="choice-pics" aria-label="Choices">
+        <ul className={entry.choicePictures.length > 2 ? 'choice-pics is-grid' : 'choice-pics'} aria-label="Choices">
           {entry.choicePictures.map((c, i) => (
             <li key={i} className={c.correct ? 'is-right' : undefined}>
               <img src={c.url} alt={c.correct ? `${c.label} (correct answer)` : c.label} loading="lazy" decoding="async" />

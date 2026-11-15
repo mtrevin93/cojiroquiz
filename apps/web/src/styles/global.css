@@ -3037,3 +3037,35 @@ dialog.modal {
   height: 17px;
   color: inherit;
 }
+
+/* three or more picture choices: two per row so each stays readable */
+.choice-pics.is-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Home results: masonry. Each card is exactly as tall as its content and the gap between
+   cards is always the same, so there is never padding inside a card or a hole in a row. */
+.card-grid {
+  display: block;
+  columns: 3 320px;
+  column-gap: 16px;
+  max-width: 1112px;
+  margin: 0 auto;
+}
+.card-grid > li {
+  display: block;
+  break-inside: avoid;
+  margin: 0 0 16px;
+  padding-bottom: 4px; /* room for the card's hard shadow */
+}
+.card-grid:has(> li:only-child) {
+  columns: 1;
+  max-width: 400px;
+}
+.card-grid:has(> li:first-child:nth-last-child(2)) {
+  columns: 2 320px;
+  max-width: 760px;
+}
+.opts {
+  margin-top: 0;
+}

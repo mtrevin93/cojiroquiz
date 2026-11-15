@@ -8,7 +8,9 @@ import {
   findImageBySha,
   findQuarantineBySha,
   findQuestionByDedupeKey,
+  getQuestion,
   listQuestionsByTextKey,
+  renameVotes,
   findQuestionForImage,
   getDraft,
   getImage,
@@ -583,6 +585,41 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
         throw new IngestError('rate_limited', 'Too many uploads. Try again later.');
       }
       return db.transaction((tx) => insertOrMerge(tx, candidate, now()));
+    },
+
+    async relabelPictures(questionId) {
+      const q = getQuestion(db, questionId);
+      const img = q?.questionImageId != null ? getImage(db, q.questionImageId) : undefined;
+      if (!q || !img) return false;
+      const hasPictures = q.pictureKey != null || q.choices.some((c) => c.kind === 'image');
+      if (!hasPictures) return false;
+      const shot = await store.get(img.bucket, img.key);
+      if (!shot) return false;
+      const checked = ParsedQuiz.safeParse(await parser.parse({ bytes: shot.body, mimeType: 'image/webp', sourceSha256: img.sha256 }));
+      if (!checked.success) return false;
+      const parsed = checked.data;
+      // Same screenshot, so the choices come back in the stored order; anything else is left alone.
+      if (parsed.choices.length !== q.choices.length || parsed.choices.some((c, i) => c.kind !== q.choices[i]!.kind)) return false;
+      const choices: StoredChoice[] = q.choices.map((c, i) =>
+        c.kind === 'image'
+          ? { ...c, label: parsed.choices[i]!.label.trim() || c.label, description: parsed.choices[i]!.description?.trim() || parsed.choices[i]!.label.trim() || c.description }
+          : c,
+      );
+      const pictureDescription = q.pictureKey ? parsed.questionImage?.description?.trim() || q.pictureDescription : q.pictureDescription;
+      db.transaction((tx) => {
+        for (const [i, c] of q.choices.entries()) {
+          const from = canonical(choiceText(c));
+          const to = canonical(choiceText(choices[i]!));
+          if (from !== to) renameVotes(tx, q.id, from, to);
+        }
+        updateQuestion(tx, q.id, {
+          choices,
+          pictureDescription,
+          searchText: buildSearchText([q.questionText, q.level, ...choices.map((x) => x.label), ...choices.map((x) => x.description), pictureDescription]),
+          updatedAt: now(),
+        });
+      });
+      return true;
     },
 
     async promoteQuarantined(quarantineId, input, meta) {

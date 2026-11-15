@@ -56,6 +56,16 @@ export const POST: APIRoute = async (ctx) => {
       const res = setAnswerByAdmin(db, id, Number(str('answerIndex')), { unhide: str('unhide') === '1' });
       return res.ok ? review(`Answer set to ${res.label}. Reports closed.`) : review(res.error, true);
     }
+    case 'question-relabel': {
+      const ingest = await getIngest();
+      if (!ingest) return review(UPLOADS_UNAVAILABLE, true);
+      try {
+        return (await ingest.relabelPictures(id)) ? review('Picture names refreshed.') : review('Nothing to refresh for this question.', true);
+      } catch (err) {
+        console.error('[admin] relabel failed', err);
+        return review('Could not re-read the screenshot. Try again.', true);
+      }
+    }
     case 'review-dismiss':
       resolveReportsForQuestion(db, id);
       return review('Reports closed. Answer unchanged.');

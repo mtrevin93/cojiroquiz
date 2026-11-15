@@ -124,6 +124,7 @@ export function updateQuestion(
       | 'level'
       | 'choices'
       | 'searchText'
+      | 'pictureDescription'
       | 'answerIndex'
       | 'answerSource'
       | 'questionImageId'
@@ -153,6 +154,11 @@ export function insertSubmission(
   },
 ): SubmissionRow {
   return db.insert(submissions).values(v).returning().get();
+}
+
+/** Move a question's votes from one answer text to another (used when a choice is renamed). */
+export function renameVotes(db: DbOrTx, questionId: number, from: string, to: string): void {
+  db.update(submissions).set({ answerCanonical: to }).where(and(eq(submissions.questionId, questionId), eq(submissions.answerCanonical, from))).run();
 }
 
 /** All votes for a question, oldest first. */
