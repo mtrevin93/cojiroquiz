@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 210" role="img" aria-label="A cute blue rooster wearing a graduation cap, glasses and a bow tie, holding a question card">
+  <ellipse cx="100" cy="198" rx="54" ry="7" fill="#000" opacity=".28"/>
+  <!-- tail -->
+  <path d="M52 150c-22-2-34-18-30-36 10 4 18 10 22 18-4-14 0-28 12-36 6 14 8 30 6 46z" fill="#2a5fc8" stroke="#101a3f" stroke-width="5" stroke-linejoin="round"/>
+  <!-- feet -->
+  <path d="M84 178v14m0 0l-9 5m9-5l8 5m24-19v14m0 0l-9 5m9-5l8 5" fill="none" stroke="#101a3f" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M84 178v14m0 0l-9 5m9-5l8 5m24-19v14m0 0l-9 5m9-5l8 5" fill="none" stroke="#ffb21e" stroke-width="4.500" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- body -->
+  <ellipse cx="100" cy="146" rx="50" ry="40" fill="#3f86f2" stroke="#101a3f" stroke-width="5"/>
+  <ellipse cx="104" cy="154" rx="30" ry="24" fill="#9cc8ff"/>
+  <!-- question card -->
+  <g transform="rotate(12 166 118)">
+    <rect x="148" y="94" width="38" height="48" rx="6" fill="#fff4d6" stroke="#101a3f" stroke-width="5"/>
+    <path d="M160 110c0-9 14-9 14 0 0 6-7 6-7 12" fill="none" stroke="#e5392f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="167" cy="131" r="3.200" fill="#e5392f"/>
+  </g>
+  <!-- wings -->
+  <path d="M142 150c12-6 22-16 26-26-12-2-24 4-32 14z" fill="#2a5fc8" stroke="#101a3f" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M56 140c-8 10-8 24 2 32 8-6 12-16 10-28z" fill="#2a5fc8" stroke="#101a3f" stroke-width="5" stroke-linejoin="round"/>
+  
+  <g transform="translate(0 0)">
+    <!-- comb -->
+    <path d="M96 44c-4-12 6-20 13-12 2-11 17-11 18 1 9-5 17 5 10 14-4 6-12 9-22 9z" fill="#e5392f" stroke="#101a3f" stroke-width="5" stroke-linejoin="round"/>
+    <!-- head -->
+    <circle cx="100" cy="82" r="41" fill="#3f86f2" stroke="#101a3f" stroke-width="5"/>
+    <path d="M66 96c6 16 20 24 34 24s28-8 34-24c-8 8-20 12-34 12s-26-4-34-12z" fill="#9cc8ff" opacity=".55"/>
+    <!-- mortarboard -->
+    <path d="M70 52l34-13 34 13-34 13z" fill="#1b2450" stroke="#101a3f" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M82 58v9c6 6 38 6 44 0v-9l-22 8z" fill="#27336e" stroke="#101a3f" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M132 52c6 4 8 10 7 18" fill="none" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="139" cy="73" r="5.500" fill="#ffd23f" stroke="#101a3f" stroke-width="3"/>
+    <!-- eyes -->
+    <ellipse cx="83" cy="86" rx="12" ry="13.500" fill="#fff" stroke="#101a3f" stroke-width="4"/>
+    <ellipse cx="117" cy="86" rx="12" ry="13.500" fill="#fff" stroke="#101a3f" stroke-width="4"/>
+    <circle cx="85" cy="88" r="7" fill="#101a3f"/><circle cx="115" cy="88" r="7" fill="#101a3f"/>
+    <circle cx="87.500" cy="85" r="2.600" fill="#fff"/><circle cx="117.500" cy="85" r="2.600" fill="#fff"/>
+    <!-- glasses -->
+    <circle cx="83" cy="86" r="16.500" fill="none" stroke="#ffd23f" stroke-width="3.500"/>
+    <circle cx="117" cy="86" r="16.500" fill="none" stroke="#ffd23f" stroke-width="3.500"/>
+    <path d="M99.500 84h1" stroke="#ffd23f" stroke-width="3.500" stroke-linecap="round"/>
+    <!-- blush -->
+    <ellipse cx="66" cy="102" rx="6" ry="4" fill="#ff8fa3" opacity=".8"/><ellipse cx="134" cy="102" rx="6" ry="4" fill="#ff8fa3" opacity=".8"/>
+    <!-- beak + wattle -->
+    <path d="M100 118c-4 0-6-3-6-7 0-3 3-5 6-5s6 2 6 5c0 4-2 7-6 7z" fill="#e5392f" stroke="#101a3f" stroke-width="4"/>
+    <path d="M89 100c3-4 19-4 22 0l-11 12z" fill="#ffb21e" stroke="#101a3f" stroke-width="4.500" stroke-linejoin="round"/>
+    <path d="M91 101.500h18" stroke="#e88a00" stroke-width="2.500" stroke-linecap="round"/>
+  </g>
+  <!-- bow tie -->
+  <path d="M100 126l-17-9v18zm0 0l17-9v18z" fill="#2fae4b" stroke="#101a3f" stroke-width="4.500" stroke-linejoin="round"/>
+  <circle cx="100" cy="126" r="5" fill="#57d06f" stroke="#101a3f" stroke-width="3.500"/>
+</svg>

@@ -208,6 +208,9 @@ importers:
       '@fontsource-variable/noto-sans':
         specifier: ^5.2.10
         version: 5.3.0
+      '@fontsource/cinzel':
+        specifier: ^5.3.0
+        version: 5.3.0
       astro:
         specifier: ^7.4.12
         version: 7.4.12(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
@@ -1138,6 +1141,9 @@ packages:
 
   '@fontsource-variable/noto-sans@5.3.0':
     resolution: {integrity: sha512-e3ZuxzY9AL2psXPZlhwhnYrHUHv6PMoyK9MQ7croF0CUgURLqu9EMjW7q2FgVLwij1tjLsIHQrnwQ8aUcg4BiA==}
+
+  '@fontsource/cinzel@5.3.0':
+    resolution: {integrity: sha512-KEOYTsrRppW0uRIPWBDPrQgunCS6f8u4nzZxYRBfo9SCknKojLYjK7B0ZoVmJhyVLefz271ZQRF9EOpHZlfhRw==}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -3793,6 +3799,8 @@ snapshots:
   '@fontsource-variable/fraunces@5.3.0': {}
 
   '@fontsource-variable/noto-sans@5.3.0': {}
+
+  '@fontsource/cinzel@5.3.0': {}
 
   '@img/colour@1.1.0': {}
 

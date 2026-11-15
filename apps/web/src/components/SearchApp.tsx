@@ -199,6 +199,7 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
         </ul>
       ) : (
         <div className="empty">
+          <img className="mascot" src="/cojiro.svg" alt="" width={120} height={126} />
           <p>
             {entries.length === 0
               ? 'No questions yet.'
