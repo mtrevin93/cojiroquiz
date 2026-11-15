@@ -40,14 +40,51 @@ for (const [sizeName, size] of Object.entries(sizes)) {
     const review = await page.locator('a[href^="/admin/review/"]').first().getAttribute('href').catch(() => null);
     if (review) pages.push(['admin-review', review]);
   }
+  // States reached by interacting, not just by URL. Nothing here submits a form.
+  const states = {
+    'home-search': async () => { await page.goto(base + '/', { waitUntil: 'networkidle' }); await page.fill('#q', 'where'); },
+    'home-empty': async () => { await page.goto(base + '/', { waitUntil: 'networkidle' }); await page.fill('#q', 'zzzzzz'); },
+    'not-found': async () => { await page.goto(base + '/q/does-not-exist', { waitUntil: 'networkidle' }); },
+    'feedback-dialog': async () => {
+      await page.goto(base + '/about', { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Feedback' }).click();
+    },
+    'report-dialog': async () => {
+      if (!q) return false;
+      await page.goto(base + q, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Report a problem' }).click();
+      await page.locator('dialog[open]').waitFor({ timeout: 5000 });
+    },
+    'admin-search': async () => {
+      if (!process.env.ADMIN_TOKEN) return false;
+      await page.goto(base + '/admin', { waitUntil: 'networkidle' });
+      await page.fill('#qfilter', 'door');
+      await page.locator('.qtile:visible .qtile-pick input').first().check();
+    },
+  };
+
+  const shoot = async (name, fullPage = true) => {
+    await page.waitForTimeout(350);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    const file = `${out}${name}-${sizeName}.png`;
+    await page.screenshot({ path: file, fullPage });
+    console.log(`${name}-${sizeName}: overflow ${overflow}px${errors.length ? ` | errors: ${errors.join(' ; ')}` : ''}`);
+  };
   for (const [name, path] of pages) {
     if (only && !name.includes(only)) continue;
     errors.length = 0;
     await page.goto(base + path, { waitUntil: 'networkidle' });
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    const file = `${out}${name}-${sizeName}.png`;
-    await page.screenshot({ path: file, fullPage: true });
-    console.log(`${name}-${sizeName}: overflow ${overflow}px${errors.length ? ` | errors: ${errors.join(' ; ')}` : ''} -> ${file}`);
+    await shoot(name);
+  }
+  for (const [name, go] of Object.entries(states)) {
+    if (only && !name.includes(only)) continue;
+    errors.length = 0;
+    try {
+      if ((await go()) === false) continue;
+      await shoot(name, !name.includes('dialog'));
+    } catch (e) {
+      console.log(`${name}-${sizeName}: FAILED ${String(e).slice(0, 140)}`);
+    }
   }
   await ctx.close();
 }

@@ -22,6 +22,8 @@ if (!q || (q.hidden && !admin)) return Astro.rewrite('/404');
 
 const answer = q.choices[q.answerIndex];
 const answerText = choiceText(answer);
+const pictureChoices = q.choices.length > 0 && q.choices.every((c) => c.imageUrl);
+const wrong = q.choices.filter((_, i) => i !== q.answerIndex);
 const short = oneLine(q.questionText, 70);
 const title = `${short} Answer: ${oneLine(answerWords(answerText), 30)}`;
 const description = `Answer: ${answerWords(answerText)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
@@ -62,68 +64,43 @@ const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? nu
         <h1 class="qcard-text" lang={q.lang}><QuestionText text={q.questionText} /></h1>
       </div>
       <div class="qcard-foot">
-        <AnswerBox label={answerText} choiceImageUrl={answer?.imageUrl ?? null} lang={q.lang} />
+        {pictureChoices && (
+          <ul class="choice-pics" lang={q.lang}>
+            {q.choices.map((c, i) => (
+              <li class:list={[i === q.answerIndex && 'is-right']}>
+                <img src={c.imageUrl!} alt={i === q.answerIndex ? `${choiceText(c)} (correct answer)` : choiceText(c)} loading="lazy" decoding="async" />
+                {i === q.answerIndex && <span class="choice-pics-mark"><CheckIcon /></span>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <AnswerBox label={answerText} choiceImageUrl={null} lang={q.lang} />
         {q.disputed && (
           <div class="qcard-meta">
-            <span class="tag disputed">Disputed answer</span>
+            <span class="tag disputed">Disputed</span>
             <span class="muted">Uploads or reports disagree on this answer.</span>
           </div>
         )}
-        <h2 class="section-label">All choices</h2>
-        <ol class="choices" lang={q.lang}>
-          {q.choices.map((c, i) => {
-            const right = i === q.answerIndex;
-            return (
-              <li class:list={['choice', 'ornate', right ? 'is-right' : 'is-wrong']}>
-                {right && <CheckIcon />}
-                {c.imageUrl && (
-                  <img class="choice-img" src={c.imageUrl} alt={c.description ?? c.label} width="72" height="72" loading="lazy" decoding="async" />
-                )}
-                <span>
-                  {choiceText(c)}
-                  {c.description && c.label && c.description !== c.label && <span class="choice-desc">{c.description}</span>}
-                  {right && <span class="sr-only"> (correct answer)</span>}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
+        {!pictureChoices && wrong.length > 0 && (
+          <div class="other-choices">
+            <h2 class="section-label">Other choices</h2>
+            <ul lang={q.lang}>
+              {wrong.map((c) => <li>{answerWords(choiceText(c))}</li>)}
+            </ul>
+          </div>
+        )}
       </div>
     </article>
 
-    <dl class="facts">
-      <div><dt>Language</dt><dd>{langName(q.lang)}</dd></div>
-      <div>
-        <dt>Confirmations</dt>
-        <dd>{q.submissionCount}</dd>
-      </div>
-      <div>
-        <dt>Source</dt>
-        <dd>{q.answerSource === 'reveal' ? 'result screenshot' : 'uploader'}</dd>
-      </div>
-    </dl>
-
-    {q.answerImage && (
-      <div class="shots">
-          <figure>
-            <a href={q.answerImage.url}>
-              <img
-                src={q.answerImage.url}
-                alt={`Screenshot of the result screen showing the correct answer “${answerText}” to: ${oneLine(q.questionText, 110)}`}
-                width={q.answerImage.width || undefined}
-                height={q.answerImage.height || undefined}
-                loading="eager"
-                fetchpriority="high"
-                decoding="async"
-              />
-            </a>
-            <figcaption>Result screenshot</figcaption>
-          </figure>
-      </div>
-    )}
+    <p class="qmeta">
+      {q.submissionCount} {q.submissionCount === 1 ? 'upload' : 'uploads'}
+      {q.answerSource === 'reveal' && ' · answer read from the result screen'}
+      {q.lang !== 'en' && ` · ${langName(q.lang)}`}
+      {q.answerImage && <> · <a href={q.answerImage.url}>result screenshot</a></>}
+    </p>
 
     <div class="report-row">
-      <ReportButton client:visible questionId={q.id} />
+      <ReportButton client:idle questionId={q.id} />
     </div>
   </div>
 </Base>

@@ -2343,3 +2343,77 @@ h1.qcard-text {
 .review-page .qcard-meta:empty {
   display: none;
 }
+
+/* ---------- question page: answer once, other choices quiet ---------- */
+
+.other-choices ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.other-choices li {
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.qmeta {
+  margin: 14px 2px 0;
+  color: #85795f;
+  font-size: 0.85rem;
+}
+.qmeta a {
+  color: inherit;
+}
+.qmeta a:hover {
+  color: var(--text);
+}
+.qpage .choice-pics li {
+  opacity: 0.7;
+}
+.qpage .choice-pics li.is-right {
+  opacity: 1;
+}
+.report-row {
+  margin-top: 18px;
+}
+.report-row .btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.report-row .btn:hover {
+  transform: none;
+  color: var(--text);
+  background: rgb(255 255 255 / 0.06);
+}
+
+/* ---------- dialogs ---------- */
+
+dialog.modal {
+  padding: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: #1a140e;
+  box-shadow: 0 30px 80px #000;
+  text-align: left;
+}
+dialog.modal::backdrop {
+  background: rgb(8 6 4 / 0.78);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+dialog.modal h2 {
+  font-size: 1.35rem;
+}
+dialog.modal label,
+dialog.modal legend {
+  font-size: 0.9rem;
+}
