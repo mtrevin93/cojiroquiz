@@ -3,6 +3,7 @@ import { choiceText, listFeedback, listQuarantine, listRecentQuestions, listRepo
 import { questionPath } from '../../components/QuestionCard.tsx';
 import Base from '../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../lib/page.ts';
+import { buildSearchText } from '@cojiro/shared';
 import { answerWords } from '../../lib/seo.ts';
 import { REPORT_REASON_LABELS } from '../../lib/text.ts';
 
@@ -175,35 +176,47 @@ function prefill(parsed: unknown) {
         onsubmit="const n=document.querySelectorAll('input[name=ids]:checked').length; return n>0 && confirm('Delete '+n+' question'+(n===1?'':'s')+' for good?')"
       >
         <label class="bulk-all"><input type="checkbox" id="bulk-all" /> Select all</label>
+        <input
+          id="qfilter"
+          class="bulk-search"
+          type="search"
+          placeholder="Search questions, choices, answers"
+          aria-label="Search questions"
+          autocomplete="off"
+          spellcheck="false"
+          form=""
+        />
+        <span class="bulk-count" id="qcount"></span>
         <button class="btn small danger" type="submit" id="bulk-submit" disabled>Delete selected</button>
       </form>
     )}
     <ul class="qgrid">
       {questions.map((q) => {
-        const thumb = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? null;
-        const pics = q.choices.filter((c) => c.imageUrl);
+        const shot = q.answerImage?.url ?? q.questionImage?.url ?? null;
+        const search = buildSearchText([q.questionText, `#${q.id}`, q.pictureDescription, ...q.choices.map((c) => c.label), ...q.choices.map((c) => c.description)]);
         return (
-          <li class:list={['qtile', q.hidden && 'is-hidden']}>
+          <li class:list={['qtile', q.hidden && 'is-hidden']} data-search={search}>
             <label class="qtile-pick">
               <input type="checkbox" name="ids" value={q.id} form="bulk-delete" aria-label={`Select question #${q.id}`} />
             </label>
-            <a class="qtile-thumb" href={`/admin/review/${q.id}`}>
-              {thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" /> : <span>No image</span>}
-            </a>
             <div class="qtile-body">
-              <div class="qcard-meta">
+              <div class="qcard-meta qtile-meta">
                 <span class="tag">#{q.id}</span>
                 {q.hidden && <span class="tag hidden-tag">Hidden</span>}
                 {q.disputed && <span class="tag disputed">Disputed</span>}
                 <span class="tag">{q.submissionCount} ✓</span>
+                {shot && <a class="tag" href={shot} target="_blank" rel="noopener noreferrer">Screenshot</a>}
               </div>
+              {q.pictureUrl && <img class="qtile-picture" src={q.pictureUrl} alt={q.pictureDescription ?? ''} loading="lazy" decoding="async" />}
               <p class="qtile-text" lang={q.lang}>{q.questionText}</p>
-              {pics.length > 0 && (
-                <div class="qtile-pics">
-                  {q.choices.map((c, i) => c.imageUrl && <img class:list={[i === q.answerIndex && 'is-right']} src={c.imageUrl} alt={choiceText(c)} loading="lazy" />)}
-                </div>
-              )}
-              <p class="qtile-answer" lang={q.lang}>{answerWords(choiceText(q.choices[q.answerIndex]))}</p>
+              <ol class="qtile-choices" lang={q.lang}>
+                {q.choices.map((c, i) => (
+                  <li class:list={[i === q.answerIndex && 'is-right']}>
+                    {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
+                    <span>{answerWords(choiceText(c))}</span>
+                  </li>
+                ))}
+              </ol>
               <div class="qtile-actions">
                 <a class="btn small secondary" href={`/admin/review/${q.id}`}>Review</a>
                 <a class="btn small ghost" href={questionPath(q.slug)}>View</a>
@@ -219,7 +232,25 @@ function prefill(parsed: unknown) {
     </ul>
     <script is:inline>
       (() => {
-        const boxes = () => [...document.querySelectorAll('input[name=ids]')];
+        const tiles = [...document.querySelectorAll('.qtile')];
+        const boxes = () => tiles.filter((t) => !t.hidden).map((t) => t.querySelector('input[name=ids]'));
+        const filter = document.getElementById('qfilter');
+        const count = document.getElementById('qcount');
+        const applyFilter = () => {
+          const terms = (filter?.value || '').normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
+          let shown = 0;
+          for (const t of tiles) {
+            const hay = t.dataset.search || '';
+            const hit = terms.every((term) => hay.includes(term));
+            t.hidden = !hit;
+            // a tile that is filtered out can never be deleted by accident
+            if (!hit) t.querySelector('input[name=ids]').checked = false;
+            if (hit) shown++;
+          }
+          if (count) count.textContent = terms.length ? `${shown} of ${tiles.length}` : `${tiles.length}`;
+        };
+        filter?.addEventListener('input', () => { applyFilter(); sync(); });
+        filter?.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
         const all = document.getElementById('bulk-all');
         const btn = document.getElementById('bulk-submit');
         if (!all || !btn) return;
@@ -231,6 +262,7 @@ function prefill(parsed: unknown) {
         };
         all.addEventListener('change', () => { boxes().forEach((b) => (b.checked = all.checked)); sync(); });
         document.addEventListener('change', (e) => { if (e.target && e.target.name === 'ids') sync(); });
+        applyFilter();
         sync();
       })();
     </script>

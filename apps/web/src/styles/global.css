@@ -2258,3 +2258,83 @@ h1.qcard-text {
 .qtile-actions form {
   margin: 0 0 0 auto;
 }
+
+/* admin grid: full question with every choice, searchable */
+.bulk-bar {
+  flex-wrap: wrap;
+}
+.bulk-search[type='search'] {
+  flex: 1 1 220px;
+  min-height: 40px;
+  padding: 6px 12px;
+}
+.bulk-count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.qgrid {
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+}
+.qtile[hidden] {
+  display: none;
+}
+.qtile-pick {
+  top: 8px;
+  left: auto;
+  right: 8px;
+  background: transparent;
+}
+.qtile-meta {
+  padding-right: 40px;
+}
+.qtile-meta a.tag {
+  text-decoration: none;
+}
+.qtile-meta a.tag:hover {
+  color: var(--gold-bright);
+  border-color: var(--line-strong);
+}
+.qtile-picture {
+  display: block;
+  width: 100%;
+  max-height: 170px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.qtile-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.qtile-choices li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #2c2318;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.qtile-choices li.is-right {
+  border-color: var(--gold-bright);
+  background: rgb(236 201 111 / 0.1);
+  color: #fff8e4;
+  font-weight: 700;
+}
+.qtile-choices li.is-right::after {
+  content: '✓';
+  margin-left: auto;
+  color: var(--gold-bright);
+}
+.qtile-choices img {
+  flex: none;
+  width: 54px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 5px;
+}
