@@ -2,18 +2,22 @@
   "name": "cojiroquiz",
   "private": true,
   "packageManager": "pnpm@12.18.0",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
-    "db:generate": "pnpm --filter @cojiro/db generate"
+    "db:generate": "pnpm --filter @cojiro/db generate",
+    "shots": "node --env-file=.env scripts/shots.mjs"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
+    "playwright-core": "^1.65.1",
     "turbo": "^2.11.11",
     "typescript": "^7.0.2",
-    "vitest": "^5.1.0",
-    "@types/node": "^24.0.0"
+    "vitest": "^5.1.0"
   }
 }

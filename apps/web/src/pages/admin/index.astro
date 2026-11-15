@@ -1,6 +1,7 @@
 ---
-import { choiceText, entryFromView, listFeedback, listQuarantine, listRecentQuestions, listReports } from '@cojiro/db';
-import QuestionCard, { questionPath } from '../../components/QuestionCard.tsx';
+import { choiceText, listFeedback, listQuarantine, listRecentQuestions, listReports } from '@cojiro/db';
+import { QuestionText, questionPath } from '../../components/QuestionCard.tsx';
+import { CheckIcon } from '../../components/icons.tsx';
 import Base from '../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../lib/page.ts';
 import { buildSearchText, canonical } from '@cojiro/shared';
@@ -67,8 +68,7 @@ function prefill(parsed: unknown) {
     {msg && <div class="notice success" role="status"><p>{msg}</p></div>}
     {error && <div class="notice error" role="alert"><p>{error}</p></div>}
 
-    <h2 id="reports">Open reports</h2>
-    {reports.length === 0 && <p class="muted">No open reports.</p>}
+    {reports.length > 0 && <h2 id="reports">Open reports</h2>}
     <ul class="admin-list">
       {reports.map((r) => (
         <li class="admin-item">
@@ -96,8 +96,7 @@ function prefill(parsed: unknown) {
       ))}
     </ul>
 
-    <h2 id="quarantine">Rejected uploads</h2>
-    {quarantine.length === 0 && <p class="muted">Nothing in quarantine.</p>}
+    {quarantine.length > 0 && <h2 id="quarantine">Rejected uploads</h2>}
     <ul class="admin-list">
       {quarantine.map((r) => {
         const thumb = thumbs.get(r.id);
@@ -202,43 +201,55 @@ function prefill(parsed: unknown) {
     <ul class="qgrid">
       {questions.map((q) => {
         const shot = q.answerImage?.url ?? q.questionImage?.url ?? null;
-        const search = buildSearchText([q.questionText, `#${q.id}`, twinsOf(q).length > 0 ? 'same text duplicate' : null, q.pictureDescription, ...q.choices.map((c) => c.label), ...q.choices.map((c) => c.description)]);
+        const twins = twinsOf(q);
+        const pictureChoices = q.choices.length > 0 && q.choices.every((c) => c.imageUrl);
+        const search = buildSearchText([
+          q.questionText,
+          `#${q.id}`,
+          twins.length > 0 ? 'same text duplicate' : null,
+          q.pictureDescription,
+          ...q.choices.map((c) => c.label),
+          ...q.choices.map((c) => c.description),
+        ]);
         return (
           <li class:list={['qtile', q.hidden && 'is-hidden']} data-search={search}>
-            <label class="qtile-pick">
-              <input type="checkbox" name="ids" value={q.id} form="bulk-delete" aria-label={`Select question #${q.id}`} />
-            </label>
-            <div class="qtile-body">
-              <div class="qcard-meta qtile-meta">
-                <span class="tag">#{q.id}</span>
-                {q.hidden && <span class="tag hidden-tag">Hidden</span>}
-                {q.disputed && <span class="tag disputed">Disputed</span>}
-                <span class="tag">{q.submissionCount} ✓</span>
-                {shot && <a class="tag" href={shot} target="_blank" rel="noopener noreferrer">Screenshot</a>}
-              </div>
-              {twinsOf(q).length > 0 && <p class="qtile-twin">Same text as {twinsOf(q).map((id) => `#${id}`).join(', ')}</p>}
-              <div class="qtile-card">
-                <QuestionCard entry={entryFromView(q)} showLang={false} />
-              </div>
-              <details class="qtile-more" open>
-                <summary>All {q.choices.length} choices</summary>
-                <ol class="qtile-choices" lang={q.lang}>
-                  {q.choices.map((c, i) => (
-                    <li class:list={[i === q.answerIndex && 'is-right']}>
-                      {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
-                      <span>{answerWords(choiceText(c))}</span>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-              <div class="qtile-actions">
-                <a class="btn small secondary" href={`/admin/review/${q.id}`}>Review</a>
-                <a class="btn small ghost" href={questionPath(q.slug)}>View</a>
-                <form method="post" action="/api/admin/question-delete" onsubmit={`return confirm('Delete question #${q.id} for good?')`}>
-                  <input type="hidden" name="id" value={q.id} />
-                  <button class="btn small danger" type="submit">Delete</button>
-                </form>
-              </div>
+            <div class="qtile-head">
+              <a class="qtile-id" href={questionPath(q.slug)} title="Open the public page">#{q.id}</a>
+              {twins.length > 0 && <span class="qtile-twin">same text as {twins.map((id) => `#${id}`).join(', ')}</span>}
+              {q.hidden && <span class="tag hidden-tag">Hidden</span>}
+              {q.disputed && <span class="tag disputed">Disputed</span>}
+              <label class="qtile-pick">
+                <input type="checkbox" name="ids" value={q.id} form="bulk-delete" aria-label={`Select question #${q.id}`} />
+              </label>
+            </div>
+            {q.pictureUrl && <img class="qtile-picture" src={q.pictureUrl} alt={q.pictureDescription ?? ''} loading="lazy" decoding="async" />}
+            <p class="qtile-text" lang={q.lang}><QuestionText text={q.questionText} /></p>
+            {pictureChoices ? (
+              <ul class="choice-pics" lang={q.lang}>
+                {q.choices.map((c, i) => (
+                  <li class:list={[i === q.answerIndex && 'is-right']}>
+                    <img src={c.imageUrl!} alt={choiceText(c)} loading="lazy" decoding="async" />
+                    {i === q.answerIndex && <span class="choice-pics-mark"><CheckIcon /></span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <ol class="qtile-choices" lang={q.lang}>
+                {q.choices.map((c, i) => (
+                  <li class:list={[i === q.answerIndex && 'is-right']}>{answerWords(choiceText(c))}</li>
+                ))}
+              </ol>
+            )}
+            <div class="qtile-foot">
+              <span class="qtile-meta">
+                {q.submissionCount} {q.submissionCount === 1 ? 'upload' : 'uploads'}
+                {shot && <> · <a href={shot} target="_blank" rel="noopener noreferrer">screenshot</a></>}
+              </span>
+              <a class="qtile-btn" href={`/admin/review/${q.id}`}>Review</a>
+              <form method="post" action="/api/admin/question-delete" onsubmit={`return confirm('Delete question #${q.id} for good?')`}>
+                <input type="hidden" name="id" value={q.id} />
+                <button class="qtile-btn is-danger" type="submit">Delete</button>
+              </form>
             </div>
           </li>
         );
@@ -281,8 +292,7 @@ function prefill(parsed: unknown) {
       })();
     </script>
 
-    <h2 id="feedback">Feedback</h2>
-    {feedback.length === 0 && <p class="muted">No feedback yet.</p>}
+    {feedback.length > 0 && <h2 id="feedback">Feedback</h2>}
     <ul class="admin-list">
       {feedback.map((f) => (
         <li class="admin-item">
