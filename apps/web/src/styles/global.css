@@ -2379,7 +2379,7 @@ h1.qcard-text {
 .report-row {
   margin-top: 18px;
 }
-.report-row .btn {
+.report-row .btn.small {
   min-height: 36px;
   padding: 0 12px;
   border-color: transparent;
@@ -2389,7 +2389,7 @@ h1.qcard-text {
   font-size: 0.88rem;
   font-weight: 600;
 }
-.report-row .btn:hover {
+.report-row .btn.small:hover {
   transform: none;
   color: var(--text);
   background: rgb(255 255 255 / 0.06);
@@ -2416,4 +2416,42 @@ dialog.modal h2 {
 dialog.modal label,
 dialog.modal legend {
   font-size: 0.9rem;
+}
+
+/* ---------- upload review: clean tap targets ---------- */
+
+.pick.ornate {
+  min-height: 60px;
+  padding: 10px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface-2);
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.pick.ornate::before,
+.pick.ornate::after {
+  display: none;
+}
+.pick.ornate:hover {
+  border-color: var(--gold);
+}
+.pick.ornate[aria-pressed='true'] {
+  border-color: var(--gold-bright);
+  background: rgb(236 201 111 / 0.14);
+  box-shadow: 0 0 30px -12px rgb(236 201 111 / 0.7);
+}
+.pick img {
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.pick-list legend {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
 }

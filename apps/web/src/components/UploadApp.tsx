@@ -279,7 +279,8 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
     return () => timers.forEach((t) => clearTimeout(t));
   }, []);
   const isToast = (it: Item) => it.status === 'done' || it.status === 'info';
-  const queue = items.filter((it) => !isToast(it));
+  // The item being reviewed is already on screen as the review card; listing it again adds nothing.
+  const queue = items.filter((it) => !isToast(it) && it !== current);
   const toasts = items.filter(isToast);
 
   const onDrop = (e: DragEvent) => {
@@ -512,7 +513,7 @@ function Review({
           Skip
         </button>
         <button type="submit" className="btn" disabled={saving || answer === null}>
-          {saving ? 'Saving…' : answer === null ? 'Tap the correct answer' : 'Publish'}
+          {saving ? 'Saving…' : 'Publish'}
         </button>
       </div>
     </form>
