@@ -2121,3 +2121,140 @@ h1.qcard-text {
   height: 16px;
   color: inherit;
 }
+
+/* ---------- admin: question grid ---------- */
+
+.bulk-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(22 17 12 / 0.95);
+}
+.bulk-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bulk-bar .btn {
+  margin-left: auto;
+}
+.bulk-bar input,
+.qtile-pick input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--gold-bright);
+}
+.qgrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.qtile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.qtile:has(.qtile-pick input:checked) {
+  border-color: var(--wrong);
+  box-shadow: 0 0 0 2px rgb(224 154 148 / 0.35);
+}
+.qtile.is-hidden {
+  opacity: 0.6;
+}
+.qtile-pick {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  border-radius: 10px;
+  background: rgb(13 10 7 / 0.8);
+  cursor: pointer;
+}
+.qtile-thumb {
+  display: grid;
+  place-items: center;
+  height: 150px;
+  background: #000;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.qtile-thumb img {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  object-position: center 35%;
+}
+.qtile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  padding: 12px;
+}
+.qtile-text {
+  margin: 0;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.qtile-pics {
+  display: flex;
+  gap: 6px;
+}
+.qtile-pics img {
+  width: 56px;
+  height: 40px;
+  object-fit: cover;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  opacity: 0.55;
+}
+.qtile-pics img.is-right {
+  border-color: var(--gold-bright);
+  opacity: 1;
+}
+.qtile-answer {
+  margin: 0;
+  color: var(--gold-bright);
+  font-weight: 700;
+}
+.qtile-answer::before {
+  content: 'Answer: ';
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.qtile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.qtile-actions form {
+  margin: 0 0 0 auto;
+}

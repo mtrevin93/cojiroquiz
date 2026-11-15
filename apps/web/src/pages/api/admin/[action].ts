@@ -33,6 +33,14 @@ export const POST: APIRoute = async (ctx) => {
     const v = form.get(k);
     return typeof v === 'string' ? v : '';
   };
+  const toAdmin = (section: string, msg: string, error = false) =>
+    ctx.redirect(`/admin?${error ? 'error' : 'msg'}=${encodeURIComponent(msg)}#${section}`, 303);
+  if (action === 'questions-delete') {
+    const ids = [...new Set(form.getAll('ids').map((v) => Number(v)))].filter((n) => Number.isSafeInteger(n) && n > 0);
+    if (ids.length === 0) return toAdmin('questions', 'Nothing selected.', true);
+    for (const qid of ids) deleteQuestion(db, qid);
+    return toAdmin('questions', `Deleted ${ids.length} ${ids.length === 1 ? 'question' : 'questions'}.`);
+  }
   const id = Number(str('id'));
   const back = (section: string, msg: string, error = false) =>
     ctx.redirect(`/admin?${error ? 'error' : 'msg'}=${encodeURIComponent(msg)}#${section}`, 303);
@@ -72,7 +80,8 @@ export const POST: APIRoute = async (ctx) => {
         questionText: str('questionText').replace(/\r\n/g, '\n').trim() || undefined,
         lang: str('lang').trim() || undefined,
         level: str('level').trim() || null,
-        answerIndex: Number.isInteger(answerIndex) ? answerIndex : undefined,
+        // No answer field (the review screen's text form) leaves the answer alone.
+        answerIndex: str('answerIndex') !== '' && Number.isInteger(answerIndex) ? answerIndex : undefined,
       });
       return res.ok ? back('questions', `Question #${id} updated.`) : back('questions', res.error, true);
     }

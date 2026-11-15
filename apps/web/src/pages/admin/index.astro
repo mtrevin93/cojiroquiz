@@ -3,6 +3,7 @@ import { choiceText, listFeedback, listQuarantine, listRecentQuestions, listRepo
 import { questionPath } from '../../components/QuestionCard.tsx';
 import Base from '../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../lib/page.ts';
+import { answerWords } from '../../lib/seo.ts';
 import { REPORT_REASON_LABELS } from '../../lib/text.ts';
 
 // Gated by src/middleware.ts; this is a second line of defence.
@@ -22,7 +23,7 @@ const thumbs = new Map<number, string | null>(
     }),
   ),
 );
-const questions = listRecentQuestions(db, urlFor, 60);
+const questions = listRecentQuestions(db, urlFor, 500);
 const feedback = listFeedback(db, 100);
 const msg = Astro.url.searchParams.get('msg');
 const error = Astro.url.searchParams.get('error');
@@ -50,7 +51,7 @@ function prefill(parsed: unknown) {
     <nav class="admin-nav" aria-label="Sections">
       <a class="chip" href="#reports">Reports <span>{reports.length}</span></a>
       <a class="chip" href="#quarantine">Rejected uploads <span>{quarantine.filter((r) => r.status === 'new').length}</span></a>
-      <a class="chip" href="#questions">Recent questions <span>{questions.length}</span></a>
+      <a class="chip" href="#questions">Questions <span>{questions.length}</span></a>
       <a class="chip" href="#feedback">Feedback <span>{feedback.length}</span></a>
     </nav>
     {msg && <div class="notice success" role="status"><p>{msg}</p></div>}
@@ -163,73 +164,76 @@ function prefill(parsed: unknown) {
       })}
     </ul>
 
-    <h2 id="questions">Recent questions</h2>
+    <h2 id="questions">Questions</h2>
     {questions.length === 0 && <p class="muted">No questions yet.</p>}
-    <ul class="admin-list">
-      {questions.map((q) => (
-        <li class="admin-item">
-          <div class="qcard-meta">
-            <span class="tag">{q.lang}</span>
-            {q.level && <span class="tag">{q.level}</span>}
-            {q.hidden && <span class="tag hidden-tag">Hidden</span>}
-            {q.disputed && <span class="tag disputed">Disputed</span>}
-          </div>
-          <p class="q" lang={q.lang}><a href={questionPath(q.slug)}>#{q.id}</a> {q.questionText}</p>
-          <div class="meta">
-            Answer: <strong lang={q.lang}>{choiceText(q.choices[q.answerIndex])}</strong> ({q.answerSource}) · {q.submissionCount}
-            confirmation{q.submissionCount === 1 ? '' : 's'} · {formatDate(q.createdAt)}
-          </div>
-          <details>
-            <summary>Edit text / answer</summary>
-            <form class="admin-form" method="post" action="/api/admin/question-edit">
-              <input type="hidden" name="id" value={q.id} />
-              <div>
-                <label for={`e-text-${q.id}`}>Question text</label>
-                <textarea id={`e-text-${q.id}`} name="questionText" required maxlength="2000" lang={q.lang}>{q.questionText}</textarea>
+    {questions.length > 0 && (
+      <form
+        id="bulk-delete"
+        class="bulk-bar"
+        method="post"
+        action="/api/admin/questions-delete"
+        onsubmit="const n=document.querySelectorAll('input[name=ids]:checked').length; return n>0 && confirm('Delete '+n+' question'+(n===1?'':'s')+' for good?')"
+      >
+        <label class="bulk-all"><input type="checkbox" id="bulk-all" /> Select all</label>
+        <button class="btn small danger" type="submit" id="bulk-submit" disabled>Delete selected</button>
+      </form>
+    )}
+    <ul class="qgrid">
+      {questions.map((q) => {
+        const thumb = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? null;
+        const pics = q.choices.filter((c) => c.imageUrl);
+        return (
+          <li class:list={['qtile', q.hidden && 'is-hidden']}>
+            <label class="qtile-pick">
+              <input type="checkbox" name="ids" value={q.id} form="bulk-delete" aria-label={`Select question #${q.id}`} />
+            </label>
+            <a class="qtile-thumb" href={`/admin/review/${q.id}`}>
+              {thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" /> : <span>No image</span>}
+            </a>
+            <div class="qtile-body">
+              <div class="qcard-meta">
+                <span class="tag">#{q.id}</span>
+                {q.hidden && <span class="tag hidden-tag">Hidden</span>}
+                {q.disputed && <span class="tag disputed">Disputed</span>}
+                <span class="tag">{q.submissionCount} ✓</span>
               </div>
-              <div class="review-grid">
-                <div>
-                  <label for={`e-lang-${q.id}`}>Language</label>
-                  <input id={`e-lang-${q.id}`} type="text" name="lang" value={q.lang} required maxlength="16" />
+              <p class="qtile-text" lang={q.lang}>{q.questionText}</p>
+              {pics.length > 0 && (
+                <div class="qtile-pics">
+                  {q.choices.map((c, i) => c.imageUrl && <img class:list={[i === q.answerIndex && 'is-right']} src={c.imageUrl} alt={choiceText(c)} loading="lazy" />)}
                 </div>
-                <div>
-                  <label for={`e-level-${q.id}`}>Level</label>
-                  <input id={`e-level-${q.id}`} type="text" name="level" value={q.level ?? ''} maxlength="100" />
-                </div>
+              )}
+              <p class="qtile-answer" lang={q.lang}>{answerWords(choiceText(q.choices[q.answerIndex]))}</p>
+              <div class="qtile-actions">
+                <a class="btn small secondary" href={`/admin/review/${q.id}`}>Review</a>
+                <a class="btn small ghost" href={questionPath(q.slug)}>View</a>
+                <form method="post" action="/api/admin/question-delete" onsubmit={`return confirm('Delete question #${q.id} for good?')`}>
+                  <input type="hidden" name="id" value={q.id} />
+                  <button class="btn small danger" type="submit">Delete</button>
+                </form>
               </div>
-              <div>
-                <label for={`e-answer-${q.id}`}>Correct answer</label>
-                <select id={`e-answer-${q.id}`} name="answerIndex">
-                  {q.choices.map((c, i) => (
-                    <option value={i} selected={i === q.answerIndex}>{choiceText(c) || `Choice ${i + 1}`}</option>
-                  ))}
-                </select>
-              </div>
-              <button class="btn small" type="submit">Save</button>
-            </form>
-          </details>
-          <div class="admin-actions">
-            <form method="post" action={`/api/admin/${q.hidden ? 'question-unhide' : 'question-hide'}`}>
-              <input type="hidden" name="id" value={q.id} />
-              <button class="btn small secondary" type="submit">{q.hidden ? 'Unhide' : 'Hide'}</button>
-            </form>
-            {q.disputed && (
-              <form method="post" action="/api/admin/question-undispute">
-                <input type="hidden" name="id" value={q.id} />
-                <button class="btn small secondary" type="submit">Clear disputed</button>
-              </form>
-            )}
-            <details>
-              <summary>Delete…</summary>
-              <form method="post" action="/api/admin/question-delete">
-                <input type="hidden" name="id" value={q.id} />
-                <button class="btn small danger" type="submit">Delete question #{q.id} for good</button>
-              </form>
-            </details>
-          </div>
-        </li>
-      ))}
+            </div>
+          </li>
+        );
+      })}
     </ul>
+    <script is:inline>
+      (() => {
+        const boxes = () => [...document.querySelectorAll('input[name=ids]')];
+        const all = document.getElementById('bulk-all');
+        const btn = document.getElementById('bulk-submit');
+        if (!all || !btn) return;
+        const sync = () => {
+          const n = boxes().filter((b) => b.checked).length;
+          btn.disabled = n === 0;
+          btn.textContent = n ? `Delete selected (${n})` : 'Delete selected';
+          all.checked = n > 0 && n === boxes().length;
+        };
+        all.addEventListener('change', () => { boxes().forEach((b) => (b.checked = all.checked)); sync(); });
+        document.addEventListener('change', (e) => { if (e.target && e.target.name === 'ids') sync(); });
+        sync();
+      })();
+    </script>
 
     <h2 id="feedback">Feedback</h2>
     {feedback.length === 0 && <p class="muted">No feedback yet.</p>}

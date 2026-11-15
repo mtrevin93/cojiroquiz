@@ -92,6 +92,28 @@ const labelFor = (canon: string) => {
       </form>
     </div>
 
+          <details>
+      <summary>Edit question text</summary>
+      <form class="admin-form" method="post" action="/api/admin/question-edit">
+        <input type="hidden" name="id" value={q.id} />
+        <div>
+          <label for={`e-text-${q.id}`}>Question text</label>
+          <textarea id={`e-text-${q.id}`} name="questionText" required maxlength="2000" lang={q.lang}>{q.questionText}</textarea>
+        </div>
+        <div class="review-grid">
+          <div>
+            <label for={`e-lang-${q.id}`}>Language</label>
+            <input id={`e-lang-${q.id}`} type="text" name="lang" value={q.lang} required maxlength="16" />
+          </div>
+          <div>
+            <label for={`e-level-${q.id}`}>Level</label>
+            <input id={`e-level-${q.id}`} type="text" name="level" value={q.level ?? ''} maxlength="100" />
+          </div>
+        </div>
+        <button class="btn small" type="submit">Save</button>
+      </form>
+    </details>
+
     <h2>Reports</h2>
     {reports.length === 0 && <p class="muted">No reports.</p>}
     <ul class="admin-list">
