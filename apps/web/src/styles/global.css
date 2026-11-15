@@ -758,7 +758,9 @@ dialog.modal::backdrop {
 /* ---------- admin ---------- */
 
 .admin {
-  padding: 20px 0;
+  /* top and bottom only: the side gutter comes from .wrap */
+  padding-top: 20px;
+  padding-bottom: 20px;
 }
 .admin h2 {
   margin-top: 2em;
