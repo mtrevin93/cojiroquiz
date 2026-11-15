@@ -1,6 +1,6 @@
 ---
-import { choiceText, listFeedback, listQuarantine, listRecentQuestions, listReports } from '@cojiro/db';
-import { questionPath } from '../../components/QuestionCard.tsx';
+import { choiceText, entryFromView, listFeedback, listQuarantine, listRecentQuestions, listReports } from '@cojiro/db';
+import QuestionCard, { questionPath } from '../../components/QuestionCard.tsx';
 import Base from '../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../lib/page.ts';
 import { buildSearchText, canonical } from '@cojiro/shared';
@@ -216,22 +216,21 @@ function prefill(parsed: unknown) {
                 <span class="tag">{q.submissionCount} ✓</span>
                 {shot && <a class="tag" href={shot} target="_blank" rel="noopener noreferrer">Screenshot</a>}
               </div>
-              {twinsOf(q).length > 0 && (
-                <p class="qtile-twin">
-                  Same text as {twinsOf(q).map((id) => `#${id}`).join(', ')}
-                  {q.id < Math.max(...twinsOf(q)) ? ' · older copy' : ' · newest'}
-                </p>
-              )}
-              {q.pictureUrl && <img class="qtile-picture" src={q.pictureUrl} alt={q.pictureDescription ?? ''} loading="lazy" decoding="async" />}
-              <p class="qtile-text" lang={q.lang}>{q.questionText}</p>
-              <ol class="qtile-choices" lang={q.lang}>
-                {q.choices.map((c, i) => (
-                  <li class:list={[i === q.answerIndex && 'is-right']}>
-                    {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
-                    <span>{answerWords(choiceText(c))}</span>
-                  </li>
-                ))}
-              </ol>
+              {twinsOf(q).length > 0 && <p class="qtile-twin">Same text as {twinsOf(q).map((id) => `#${id}`).join(', ')}</p>}
+              <div class="qtile-card">
+                <QuestionCard entry={entryFromView(q)} showLang={false} />
+              </div>
+              <details class="qtile-more" open>
+                <summary>All {q.choices.length} choices</summary>
+                <ol class="qtile-choices" lang={q.lang}>
+                  {q.choices.map((c, i) => (
+                    <li class:list={[i === q.answerIndex && 'is-right']}>
+                      {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
+                      <span>{answerWords(choiceText(c))}</span>
+                    </li>
+                  ))}
+                </ol>
+              </details>
               <div class="qtile-actions">
                 <a class="btn small secondary" href={`/admin/review/${q.id}`}>Review</a>
                 <a class="btn small ghost" href={questionPath(q.slug)}>View</a>

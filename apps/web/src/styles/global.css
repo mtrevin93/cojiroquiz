@@ -2348,3 +2348,24 @@ h1.qcard-text {
   font-size: 0.82rem;
   font-weight: 600;
 }
+
+/* admin tiles show the same card visitors see, with admin options around it */
+.qgrid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
+}
+.qtile {
+  overflow: visible;
+}
+.qtile-card .qcard {
+  box-shadow: none;
+}
+.qtile-more summary {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.qtile-more[open] summary {
+  margin-bottom: 8px;
+}

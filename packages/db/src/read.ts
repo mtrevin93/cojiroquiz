@@ -175,6 +175,29 @@ function toSearchEntry(row: Row, urlFor: UrlFor): SearchEntry {
   };
 }
 
+/** The public card's data for one question (admin pages render the same card as visitors see). */
+export function entryFromView(v: QuestionView): SearchEntry {
+  const answer = v.choices[v.answerIndex];
+  return {
+    id: v.id,
+    slug: v.slug,
+    lang: v.lang,
+    level: v.level,
+    questionText: v.questionText,
+    pictureUrl: v.pictureUrl,
+    choicePictures: v.choices.every((c) => c.imageUrl)
+      ? v.choices.map((c, i) => ({ url: c.imageUrl!, label: choiceText(c), correct: i === v.answerIndex }))
+      : [],
+    searchText: '',
+    answerLabel: choiceText(answer),
+    answerImageUrl: v.answerImage?.url ?? null,
+    answerChoiceImageUrl: answer?.imageUrl ?? null,
+    disputed: v.disputed,
+    answerImageWidth: v.answerImage?.width ?? null,
+    answerImageHeight: v.answerImage?.height ?? null,
+  };
+}
+
 /** Compact index of every visible question, newest first, for the search island. */
 export function buildSearchIndex(db: Db, urlFor: UrlFor, filter: Omit<QuestionFilter, 'includeHidden'> = {}): SearchEntry[] {
   const rows = baseQuery(db)
