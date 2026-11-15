@@ -14,6 +14,7 @@ export const GET: APIRoute = async () => {
     const answer = choiceText(q.choices[q.answerIndex]);
     return [
       `## ${q.questionText.replace(/\s*\n\s*/g, ' / ')}`,
+      ...(q.pictureUrl ? [`Picture: ${q.pictureDescription ?? 'shown with the question'} (${q.pictureUrl})`] : []),
       `Choices: ${q.choices.map((c) => choiceText(c)).join(' | ')}`,
       `Answer: ${answerWords(answer)}${q.disputed ? ' (disputed)' : ''}`,
       `Language: ${q.lang}`,

@@ -474,6 +474,7 @@ function Review({
 
       <div className="qcard">
         <div className="qcard-body">
+          {draft.pictureUrl && <img className="qcard-picture" src={draft.pictureUrl} alt="Picture shown with the question" />}
           <p className="qcard-text" lang={lang}>
             <QuestionText text={draft.questionText} />
           </p>

@@ -23,7 +23,7 @@ export function searchTextFor(q: { questionText: string; level: string | null; c
 }
 
 export function dedupeKeyFor(q: { lang: string; questionText: string; choices: StoredChoice[] }): string {
-  return createHash('sha256').update(dedupeMaterial(q.lang, q.questionText, q.choices.map(choiceIdentity))).digest('hex');
+  return createHash('sha256').update(dedupeMaterial(q.lang, q.questionText, q.choices.map((c) => (c.kind === 'image' ? '\u0001picture' : c.label)))).digest('hex');
 }
 
 /** Insert a report and apply its safety valves. Returns null if the question does not exist. */
@@ -100,7 +100,10 @@ export function editQuestion(
   if (next.answerIndex < 0 || next.answerIndex >= next.choices.length) {
     return { ok: false, error: 'Answer index is out of range.' };
   }
-  const dedupeKey = dedupeKeyFor(next);
+  // Text key from the text; questions with pictures keep a key that also depends on the pictures.
+  const textKey = dedupeKeyFor(next);
+  const hashes = [q.picturePhash, ...q.choices.map((c) => c.phash ?? null)].filter(Boolean);
+  const dedupeKey = hashes.length ? createHash('sha256').update([textKey, ...hashes].join(':')).digest('hex') : textKey;
   const clash = db.select({ id: questions.id }).from(questions).where(eq(questions.dedupeKey, dedupeKey)).get();
   if (clash && clash.id !== id) return { ok: false, error: `That text duplicates question #${clash.id}.` };
   db.update(questions)
@@ -111,6 +114,7 @@ export function editQuestion(
       answerIndex: next.answerIndex,
       searchText: searchTextFor(next),
       dedupeKey,
+      textKey,
       updatedAt: Date.now(),
     })
     .where(eq(questions.id, id))

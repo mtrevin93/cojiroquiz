@@ -30,6 +30,10 @@ The game exists in several languages. The layout is the same in all of them.
 - questionNumber: the N from "Question N", or null.
 - lang: the BCP-47 tag of the language the quiz text is written in (for example "en", "ja", "es", "pt-BR"). Judge it from the question text and header, not from the phone's status bar.
 
+# Question picture
+
+Some questions show a picture as part of the question, in the dark panel above or below the question text (for example a screenshot of a place above "Where is this?"). When there is one, set questionImage to its bounding box (fractions of the full image, the picture only, without the panel around it) and a short plain description of what it shows, in the quiz's language. When the question is text only, questionImage is null. Pictures inside the choice boxes are choices, not the question picture.
+
 # Choices
 
 List the choices in reading order: top to bottom, and left to right within a row. For each one:
@@ -45,15 +49,21 @@ After the player answers, the game marks the choices. Read this carefully, becau
 
 - The player's pick has a bright WHITE BORDER around its box.
 - PINK (a pink glow around the box and a large pink mark painted over it) means that pick was WRONG.
-- GOLD paint (a large gold/mustard mark painted over the box) marks the CORRECT answer.
+- GREEN (a green/teal glow around the box and a large green check mark painted over it) means that pick was CORRECT.
+- GOLD paint (a large gold/mustard check mark painted over a box) marks the CORRECT answer when the player picked a different one.
 
-So: reveal.correctIndex is the index of the gold-painted choice, and reveal.selectedIndex is the index of the white-bordered choice. When the player was wrong these are two different choices: the white-bordered pink one is the pick, the gold one is correct. When the player was right, the same choice has both the white border and gold paint, and the two indexes are equal. Indexes are zero-based positions in your choices list.
+So reveal.selectedIndex is the index of the white-bordered choice, and reveal.correctIndex is:
+- the same index, when the pick is marked green (the player was right);
+- the index of the gold-painted choice, when the pick is marked pink and another choice is painted gold;
+- the index of the other choice, when the pick is marked pink, there are exactly two choices, and nothing is painted gold yet;
+- null, when the pick is marked pink, there are more than two choices, and no choice is painted gold (the correct answer is not shown).
+Indexes are zero-based positions in your choices list.
 
-Before the player answers, nothing is highlighted: every box has the same thin gold frame and brown fill. In that case reveal.present is false and both indexes are null. The small, faint, thin "X" or "✓" glyph centred in a symbol box is that choice's label and is always there; it is not a highlight. A reveal mark is unmistakably larger and coloured, painted behind or over that small glyph. If you cannot tell which choice is gold, set correctIndex to null rather than guessing, and lower the confidence.
+Before the player answers, nothing is highlighted: every box has the same thin gold frame and brown fill. In that case reveal.present is false and both indexes are null. The small, faint, thin "X" or "✓" glyph centred in a symbol box is that choice's label and is always there; it is not a highlight. A reveal mark is unmistakably larger and coloured, painted behind or over that small glyph or over the picture in the box. If you cannot tell which choice is correct, set correctIndex to null rather than guessing, and lower the confidence.
 
 # Rejecting
 
-Set isQuizScreenshot to false and give a short rejectReason when the image is not this quiz screen (another app, a photo, a results or menu screen of the game, a meme, a document), when it is cropped or obscured so the question or the choices cannot be read, or when it is the quiz but in a layout that does not fit the description above (for example the question itself is a picture rather than text, or there are no choice boxes). For a rejected image still fill in whatever you can read and use empty values for the rest (empty questionText, empty choices, lang "und", reveal not present). When isQuizScreenshot is true, rejectReason is null.
+Set isQuizScreenshot to false and give a short rejectReason when the image is not this quiz screen (another app, a photo, a results or menu screen of the game, a meme, a document), when it is cropped or obscured so the question or the choices cannot be read, or when it is the quiz but in a layout that does not fit the description above (for example there is no question text at all, or there are no choice boxes). For a rejected image still fill in whatever you can read and use empty values for the rest (empty questionText, empty choices, lang "und", reveal not present). When isQuizScreenshot is true, rejectReason is null.
 
 # Confidence
 

@@ -5,6 +5,7 @@ import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
 import type { AnswerSource, Bucket, ParsedQuiz, StoredChoice } from '@cojiro/shared';
 import type { Db } from './client.ts';
 import { drafts, images, quarantine, questions, rateEvents, submissions } from './schema.ts';
+import type { DraftVisual } from './schema.ts';
 
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 export type DbOrTx = Db | Tx;
@@ -55,7 +56,7 @@ export function findQuestionForImage(db: DbOrTx, imageId: number): { id: number;
 
 export function insertDraft(
   db: DbOrTx,
-  v: { id: string; imageId: number; parsed: ParsedQuiz; ipHash: string; createdAt: number },
+  v: { id: string; imageId: number; parsed: ParsedQuiz; visual?: DraftVisual | null; ipHash: string; createdAt: number },
 ): void {
   db.insert(drafts).values(v).run();
 }
@@ -79,6 +80,11 @@ export function findQuestionByDedupeKey(db: DbOrTx, dedupeKey: string): Question
   return db.select().from(questions).where(eq(questions.dedupeKey, dedupeKey)).get();
 }
 
+/** Every question with the same text; pictures decide between them. */
+export function listQuestionsByTextKey(db: DbOrTx, textKey: string): QuestionRow[] {
+  return db.select().from(questions).where(eq(questions.textKey, textKey)).all();
+}
+
 export function getQuestion(db: DbOrTx, id: number): QuestionRow | undefined {
   return db.select().from(questions).where(eq(questions.id, id)).get();
 }
@@ -92,6 +98,10 @@ export function insertQuestion(
     questionText: string;
     searchText: string;
     dedupeKey: string;
+    textKey: string;
+    pictureKey: string | null;
+    picturePhash: string | null;
+    pictureDescription: string | null;
     choices: StoredChoice[];
     answerIndex: number;
     answerSource: AnswerSource;

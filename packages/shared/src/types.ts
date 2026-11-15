@@ -16,6 +16,14 @@ export const ParsedQuiz = z.object({
   questionNumber: z.number().int().nullable(),
   /** Exact question text, line breaks preserved, no translation. */
   questionText: z.string(),
+  /** A picture shown as part of the question (e.g. above "Where is this?"), or null. */
+  questionImage: z
+    .object({
+      box: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
+      /** Plain description of what the picture shows, in the quiz's language. */
+      description: z.string(),
+    })
+    .nullable(),
   choices: z.array(
     z.object({
       /** Exact text for text choices; "X" / "✓" for symbols; short name for images. */
@@ -46,6 +54,8 @@ export const StoredChoice = z.object({
   description: z.string().nullable(),
   /** Key in the public bucket of the cropped choice image, for image choices. */
   imageKey: z.string().nullable(),
+  /** Perceptual hash of that image; picture choices are matched by look, not by description. */
+  phash: z.string().nullable().optional(),
 });
 export type StoredChoice = z.infer<typeof StoredChoice>;
 
@@ -61,6 +71,9 @@ export interface QuestionDTO {
   choices: Array<StoredChoice & { imageUrl: string | null }>;
   answerIndex: number;
   answerSource: AnswerSource;
+  /** The picture that is part of the question itself (public URL), if it has one. */
+  pictureUrl: string | null;
+  pictureDescription: string | null;
   /** Screenshot of the question (public URL), if any. */
   questionImageUrl: string | null;
   /** Reveal screenshot showing the correct answer (public URL), if any. */
@@ -78,6 +91,8 @@ export interface SearchIndexEntry {
   lang: string;
   level: string | null;
   questionText: string;
+  /** The picture that is part of the question itself, if it has one. */
+  pictureUrl: string | null;
   searchText: string;
   answerLabel: string;
   answerImageUrl: string | null;
@@ -98,6 +113,8 @@ export interface DraftDTO {
   lang: string;
   level: string | null;
   questionText: string;
+  /** The picture that is part of the question, cropped from the screenshot. */
+  pictureUrl: string | null;
   choices: Array<{ label: string; kind: ChoiceKind; description: string | null; previewUrl: string | null }>;
   /** Answer read from a reveal screenshot; null means the uploader must pick. */
   detectedAnswerIndex: number | null;

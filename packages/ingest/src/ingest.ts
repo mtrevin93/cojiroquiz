@@ -8,6 +8,7 @@ import {
   findImageBySha,
   findQuarantineBySha,
   findQuestionByDedupeKey,
+  listQuestionsByTextKey,
   findQuestionForImage,
   getDraft,
   getImage,
@@ -42,7 +43,7 @@ import {
   dedupeMaterial,
   joinSpacedLetters,
 } from '@cojiro/shared';
-import { checkImage, cropBox, imageSize, processScreenshot } from './image.ts';
+import { checkImage, cropBox, dHash, hamming, imageSize, processScreenshot } from './image.ts';
 import type { QuizParser } from './parser.ts';
 
 export interface IngestConfig {
@@ -88,12 +89,85 @@ export function choiceText(c: { label: string; kind: string; description?: strin
   return c.kind === 'image' ? c.description || c.label : c.label;
 }
 
+/**
+ * Hash of a question's text: language, question and text choices. Picture choices only
+ * count as "a picture" here, because their descriptions are written by the parser and
+ * vary between uploads; pictures are compared by perceptual hash instead (matchQuestion).
+ */
 export function computeDedupeKey(
   lang: string,
   questionText: string,
   choices: Array<{ label: string; kind: string; description?: string | null }>,
 ): string {
-  return sha256Hex(dedupeMaterial(lang, questionText, choices.map(choiceText)));
+  return sha256Hex(dedupeMaterial(lang, questionText, choices.map((c) => (c.kind === 'image' ? '\u0001picture' : c.label))));
+}
+
+/** Two pictures are "the same" when their 64-bit hashes differ by at most this many bits. */
+const MATCH_BITS = 10;
+
+/** Perceptual hashes taken from one upload: the question's picture and each picture choice. */
+interface Visual {
+  picturePhash: string | null;
+  choicePhashes: Array<string | null>;
+}
+const NO_VISUAL = (n: number): Visual => ({ picturePhash: null, choicePhashes: Array.from({ length: n }, () => null) });
+
+type ChoiceLike = { label: string; kind: string; description?: string | null };
+
+/**
+ * Is this upload the stored question `q`? Returns, for each uploaded choice, the index of
+ * the same choice in `q.choices` (choice order is shuffled between runs), or null if not.
+ */
+function matchQuestion(q: QuestionRow, choices: ChoiceLike[], v: Visual): number[] | null {
+  if ((q.picturePhash == null) !== (v.picturePhash == null)) return null;
+  if (q.picturePhash && v.picturePhash && hamming(q.picturePhash, v.picturePhash) > MATCH_BITS) return null;
+  if (choices.length !== q.choices.length) return null;
+  const used = new Set<number>();
+  const map: number[] = [];
+  for (const [i, c] of choices.entries()) {
+    let j = -1;
+    if (c.kind === 'image') {
+      const ph = v.choicePhashes[i];
+      const pool = q.choices.map((qc, k) => ({ qc, k })).filter(({ qc, k }) => qc.kind === 'image' && !used.has(k));
+      if (ph) {
+        let best = MATCH_BITS + 1;
+        for (const { qc, k } of pool) {
+          if (!qc.phash) continue;
+          const d = hamming(qc.phash, ph);
+          if (d < best) {
+            best = d;
+            j = k;
+          }
+        }
+      }
+      if (j < 0) {
+        // No hash on one side (crop failed, or a row stored before pictures were hashed):
+        // fall back to the description, then to position among unhashed rows.
+        const unhashed = pool.filter(({ qc }) => !qc.phash || !ph);
+        const same = unhashed.find(({ qc }) => canonical(choiceText(qc)) === canonical(choiceText(c)));
+        j = same?.k ?? unhashed.find(({ qc, k }) => !qc.phash && k === i)?.k ?? -1;
+      }
+    } else {
+      j = q.choices.findIndex((qc, k) => !used.has(k) && qc.kind !== 'image' && canonical(qc.label) === canonical(c.label));
+    }
+    if (j < 0) return null;
+    used.add(j);
+    map.push(j);
+  }
+  return map;
+}
+
+function findMatch(
+  db: Parameters<typeof listQuestionsByTextKey>[0],
+  textKey: string,
+  choices: ChoiceLike[],
+  v: Visual,
+): { question: QuestionRow; map: number[] } | undefined {
+  for (const question of listQuestionsByTextKey(db, textKey)) {
+    const map = matchQuestion(question, choices, v);
+    if (map) return { question, map };
+  }
+  return undefined;
 }
 
 /** ASCII URL slug; text in non-Latin scripts yields "" (the slug is then just the id). */
@@ -126,6 +200,16 @@ function detectedAnswer(parsed: ParsedQuiz): number | null {
     : null;
 }
 
+/** Crops made from a screenshot at upload time (stored on the draft). */
+interface DraftCrops {
+  picture: { key: string; phash: string } | null;
+  choices: Array<{ key: string; phash: string } | null>;
+}
+const visualOf = (c: DraftCrops): Visual => ({
+  picturePhash: c.picture?.phash ?? null,
+  choicePhashes: c.choices.map((x) => x?.phash ?? null),
+});
+
 /** Everything needed to insert a question or merge a vote into an existing one. */
 interface Candidate {
   lang: string;
@@ -137,6 +221,10 @@ interface Candidate {
   imageId: number | null;
   parsed: ParsedQuiz | null;
   ipHash: string;
+  /** The picture that is part of the question, if any. */
+  pictureKey: string | null;
+  pictureDescription: string | null;
+  visual: Visual;
 }
 
 /**
@@ -198,11 +286,16 @@ function recount(tx: Tx, q: QuestionRow, now: number): boolean {
 function insertOrMerge(tx: Tx, c: Candidate, now: number): ConfirmResult {
   const chosen = c.choices[c.answerIndex];
   if (!chosen) throw new IngestError('invalid_answer', 'answerIndex does not match any choice.');
-  const answerCanonical = canonical(choiceText(chosen));
-  const dedupeKey = computeDedupeKey(c.lang, c.questionText, c.choices);
-
-  let question = findQuestionByDedupeKey(tx, dedupeKey);
+  const textKey = computeDedupeKey(c.lang, c.questionText, c.choices);
+  const match = findMatch(tx, textKey, c.choices, c.visual);
+  let question = match?.question;
   const merged = question !== undefined;
+  // Vote for the stored question's own wording of the chosen choice, so votes from
+  // different uploads of the same picture choice add up.
+  const answerCanonical = canonical(choiceText(match ? match.question.choices[match.map[c.answerIndex]!]! : chosen));
+  const hashes = [c.visual.picturePhash, ...c.visual.choicePhashes].filter((h): h is string => !!h);
+  let dedupeKey = hashes.length ? sha256Hex([textKey, c.visual.picturePhash ?? '', ...c.visual.choicePhashes.filter(Boolean).sort()].join(':')) : textKey;
+  if (!merged && findQuestionByDedupeKey(tx, dedupeKey)) dedupeKey = sha256Hex(`${dedupeKey}:${randomUUID()}`);
   if (!question) {
     const inserted = insertQuestion(tx, {
       slug: `tmp-${randomUUID()}`,
@@ -214,8 +307,13 @@ function insertOrMerge(tx: Tx, c: Candidate, now: number): ConfirmResult {
         c.level,
         ...c.choices.map((x) => x.label),
         ...c.choices.map((x) => x.description),
+        c.pictureDescription,
       ]),
       dedupeKey,
+      textKey,
+      pictureKey: c.pictureKey,
+      picturePhash: c.visual.picturePhash,
+      pictureDescription: c.pictureDescription,
       choices: c.choices,
       answerIndex: c.answerIndex,
       answerSource: c.answerSource,
@@ -266,6 +364,9 @@ function manualCandidate(input: ManualInput, meta: RequestMeta, imageId: number 
     imageId,
     parsed: null,
     ipHash: meta.ipHash,
+    pictureKey: null,
+    pictureDescription: null,
+    visual: NO_VISUAL(labels.length),
   };
 }
 
@@ -297,18 +398,21 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
     return { status: 'quarantined', reason: publicReason(reason) };
   }
 
-  function toDraftDTO(draftId: string, parsed: ParsedQuiz): DraftDTO {
-    const existing = findQuestionByDedupeKey(db, computeDedupeKey(parsed.lang, parsed.questionText, parsed.choices));
+  function toDraftDTO(draftId: string, parsed: ParsedQuiz, crops: DraftCrops): DraftDTO {
+    const textKey = computeDedupeKey(parsed.lang, parsed.questionText, parsed.choices);
+    const match = findMatch(db, textKey, parsed.choices, visualOf(crops));
+    const existing = match?.question;
     return {
       draftId,
       lang: parsed.lang,
       level: parsed.level,
       questionText: parsed.questionText,
-      choices: parsed.choices.map((c) => ({
+      pictureUrl: crops.picture ? store.publicUrl(crops.picture.key) : null,
+      choices: parsed.choices.map((c, i) => ({
         label: c.label,
         kind: c.kind,
         description: c.description,
-        previewUrl: null,
+        previewUrl: crops.choices[i] ? store.publicUrl(crops.choices[i]!.key) : null,
       })),
       detectedAnswerIndex: detectedAnswer(parsed),
       confidence: parsed.confidence,
@@ -391,14 +495,28 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
       await store.put('public', key, image.bytes, 'image/webp');
       const hasReveal = detectedAnswer(parsed) !== null;
       const draftId = randomUUID();
+
+      // Crop the question's picture and any picture choices, and hash how they look.
+      const crops: DraftCrops = { picture: null, choices: parsed.choices.map(() => null) };
+      const cropAndStore = async (box: { x: number; y: number; w: number; h: number }, cropKey: string) => {
+        const crop = await cropBox(image.bytes, box);
+        const phash = crop ? await dHash(crop) : null;
+        if (!crop || !phash) return null;
+        await store.put('public', cropKey, crop, 'image/webp');
+        return { key: cropKey, phash };
+      };
+      if (parsed.questionImage?.box) crops.picture = await cropAndStore(parsed.questionImage.box, `pics/${sha}.webp`);
+      for (const [i, c] of parsed.choices.entries()) {
+        if (c.kind === 'image' && c.box) crops.choices[i] = await cropAndStore(c.box, `choices/${sha}-${i}.webp`);
+      }
       db.transaction((tx) => {
         const row = findImageBySha(tx, sha);
         const dims = { bucket: 'public' as const, key, width: image.width, height: image.height, hasReveal };
         if (row) updateImage(tx, row.id, dims);
         const imageId = row?.id ?? insertImage(tx, { sha256: sha, ...dims, createdAt: now() }).id;
-        insertDraft(tx, { id: draftId, imageId, parsed, ipHash: meta.ipHash, createdAt: now() });
+        insertDraft(tx, { id: draftId, imageId, parsed, visual: crops, ipHash: meta.ipHash, createdAt: now() });
       });
-      return { status: 'draft', draft: toDraftDTO(draftId, parsed) };
+      return { status: 'draft', draft: toDraftDTO(draftId, parsed, crops) };
     },
 
     async confirmDraft(draftId, input, meta) {
@@ -419,36 +537,17 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
       }
       const questionText = (v.questionText ?? parsed.questionText).trim();
       if (!questionText) throw new IngestError('invalid_input', 'Question text cannot be empty.');
+      const crops: DraftCrops = draft.visual ?? { picture: null, choices: parsed.choices.map(() => null) };
       const choices: StoredChoice[] = parsed.choices.map((c, i) => ({
         label: v.choiceLabels?.[i]?.trim() || c.label,
         kind: c.kind,
         description: c.description,
-        imageKey: null,
+        imageKey: crops.choices[i]?.key ?? null,
+        phash: crops.choices[i]?.phash ?? null,
       }));
       const lang = cleanLang(v.lang ?? parsed.lang);
       const level = cleanLevel(v.level === undefined ? parsed.level : v.level);
       const answerSource: AnswerSource = detectedAnswer(parsed) === v.answerIndex ? 'reveal' : 'manual';
-
-      // Blob work happens before the transaction: crop picture choices for a brand-new question.
-      const imageRow = getImage(db, draft.imageId);
-      const isNew = !findQuestionByDedupeKey(db, computeDedupeKey(lang, questionText, choices));
-      if (isNew && imageRow && parsed.choices.some((c) => c.kind === 'image' && c.box)) {
-        const shot = await store.get(imageRow.bucket, imageRow.key);
-        if (shot) {
-          for (const [i, c] of parsed.choices.entries()) {
-            if (c.kind !== 'image' || !c.box) continue;
-            const crop = await cropBox(shot.body, c.box);
-            if (!crop) continue;
-            const key = `choices/${imageRow.sha256}-${i}.webp`;
-            try {
-              await store.put('public', key, crop, 'image/webp');
-              choices[i]!.imageKey = key;
-            } catch {
-              // leave imageKey null: the page falls back to the full screenshot
-            }
-          }
-        }
-      }
 
       return db.transaction((tx) => {
         // Re-check inside the transaction so a draft can only be confirmed once.
@@ -457,7 +556,20 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
         }
         const result = insertOrMerge(
           tx,
-          { lang, level, questionText, choices, answerIndex: v.answerIndex, answerSource, imageId: draft.imageId, parsed, ipHash: meta.ipHash },
+          {
+            lang,
+            level,
+            questionText,
+            choices,
+            answerIndex: v.answerIndex,
+            answerSource,
+            imageId: draft.imageId,
+            parsed,
+            ipHash: meta.ipHash,
+            pictureKey: crops.picture?.key ?? null,
+            pictureDescription: crops.picture ? parsed.questionImage?.description?.trim() || null : null,
+            visual: visualOf(crops),
+          },
           now(),
         );
         deleteDraft(tx, draftId);

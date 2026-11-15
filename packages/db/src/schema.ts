@@ -32,6 +32,12 @@ export const questions = sqliteTable(
     questionText: text('question_text').notNull(),
     searchText: text('search_text').notNull(),
     dedupeKey: text('dedupe_key').notNull(),
+    /** Hash of the text alone (language, question, text choices). Questions that also have pictures share it. */
+    textKey: text('text_key'),
+    /** Picture that is part of the question: key in the public bucket, perceptual hash, description. */
+    pictureKey: text('picture_key'),
+    picturePhash: text('picture_phash'),
+    pictureDescription: text('picture_description'),
     choices: text('choices_json', { mode: 'json' }).$type<StoredChoice[]>().notNull(),
     answerIndex: integer('answer_index').notNull(),
     answerSource: text('answer_source', { enum: ['reveal', 'manual'] }).notNull(),
@@ -50,6 +56,7 @@ export const questions = sqliteTable(
     uniqueIndex('questions_dedupe_uq').on(t.dedupeKey),
     index('questions_lang_idx').on(t.lang),
     index('questions_level_idx').on(t.level),
+    index('questions_text_key_idx').on(t.textKey),
   ],
 );
 
@@ -79,9 +86,17 @@ export const drafts = sqliteTable('drafts', {
     .notNull()
     .references(() => images.id),
   parsed: text('parsed_json', { mode: 'json' }).$type<ParsedQuiz>().notNull(),
+  /** Crops and perceptual hashes made from the screenshot at upload time. */
+  visual: text('visual_json', { mode: 'json' }).$type<DraftVisual | null>(),
   ipHash: text('ip_hash').notNull(),
   createdAt: integer('created_at').notNull().default(now),
 });
+
+export interface DraftVisual {
+  picture: { key: string; phash: string } | null;
+  /** One entry per choice, null for choices that are not pictures. */
+  choices: Array<{ key: string; phash: string } | null>;
+}
 
 /** Uploads the parser could not fit. Private; reviewed in admin. */
 export const quarantine = sqliteTable(

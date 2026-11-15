@@ -185,8 +185,8 @@ describe('confirm: insert or merge', () => {
     });
     expect(q.questionImageId).toBe(db.select().from(schema.images).get()!.id);
     expect(q.choices).toEqual([
-      { label: 'X', kind: 'symbol', description: null, imageKey: null },
-      { label: '✓', kind: 'symbol', description: null, imageKey: null },
+      { label: 'X', kind: 'symbol', description: null, imageKey: null, phash: null },
+      { label: '✓', kind: 'symbol', description: null, imageKey: null, phash: null },
     ]);
     expect(q.searchText).toContain('rayray');
     expect(q.searchText).toContain('egg level');
@@ -385,7 +385,7 @@ describe('confirm: insert or merge', () => {
     expect(q.searchText).toContain('bottled fairy');
     expect(db.select().from(schema.submissions).get()!.answerCanonical).toBe('bottled poe');
 
-    // the same picture question with different short labels still merges (description is the identity)
+    // an upload whose pictures could not be cropped still merges, by description
     const again = await png(400, 800);
     parser.set(
       again,
@@ -542,5 +542,76 @@ describe('admin-locked answers', () => {
     expect(q.answerIndex).toBe(0);
     expect(q.submissionCount).toBe(4);
     expect(q.disputed).toBe(false);
+  });
+});
+
+describe('questions with pictures', () => {
+  /** A screenshot whose top half is a picture made of `stripes` vertical bands. */
+  async function shot(stripes: number, width = 400): Promise<Uint8Array> {
+    const h = width * 2;
+    const band = Math.ceil(width / stripes);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}"><rect width="100%" height="100%" fill="#222"/>${Array.from(
+      { length: stripes },
+      (_, i) => `<rect x="${i * band}" y="0" width="${band}" height="${h / 2}" fill="${i % 2 ? '#fff' : '#000'}"/>`,
+    ).join('')}<text x="10" y="${h - 20 - stripes}" fill="#888" font-size="${10 + (width % 7)}">${Math.random()}</text></svg>`;
+    return new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer());
+  }
+  const where = (over: Partial<ParsedQuiz> = {}) =>
+    quiz({
+      questionText: 'Where is this?',
+      questionImage: { box: { x: 0, y: 0, w: 1, h: 0.5 }, description: 'striped wall' },
+      choices: [
+        { label: 'Hyrule Castle', kind: 'text', description: null, box: null },
+        { label: 'Kakariko Village', kind: 'text', description: null, box: null },
+      ],
+      ...over,
+    });
+
+  it('keeps the picture, and tells apart questions that share their text', async () => {
+    const a = await shot(2);
+    parser.set(a, where());
+    const first = await publish(a, 0, ip(1));
+    const q = question(first.questionId);
+    expect(q.pictureKey).toBe(`pics/${sha256Hex(a)}.webp`);
+    expect(await store.get('public', q.pictureKey!)).not.toBeNull();
+    expect(q.pictureDescription).toBe('striped wall');
+    expect(q.searchText).toContain('striped wall');
+
+    // same words, different picture: a different question
+    const b = await shot(7);
+    parser.set(b, where());
+    const second = await publish(b, 1, ip(2));
+    expect(second.merged).toBe(false);
+    expect(second.questionId).not.toBe(first.questionId);
+
+    // the first picture again, from another phone (other size, choices shuffled): same question
+    const c = await shot(2, 520);
+    parser.set(c, where({ choices: [...where().choices].reverse() }));
+    const d = draftOf(await ingest.processUpload({ bytes: c, ...png_ }, ip(3)));
+    expect(d.duplicateOf?.id).toBe(first.questionId);
+    expect(d.pictureUrl).toContain('pics/');
+    const third = await ingest.confirmDraft(d.draftId, { answerIndex: 1 }, ip(3)); // Hyrule Castle, now second
+    expect(third).toMatchObject({ questionId: first.questionId, merged: true, disputed: false });
+    expect(count(schema.questions)).toBe(2);
+  });
+
+  it('matches picture choices by how they look, not by their description', async () => {
+    const pic = (n: number) => ({ x: 0, y: 0, w: 1, h: 0.5 * (n ? 1 : 1) });
+    const a = await shot(2);
+    const doors = (labels: [string, string]) =>
+      quiz({
+        questionText: 'Which door leads to Barinade?',
+        choices: [
+          { label: labels[0], kind: 'image', description: labels[0], box: pic(0) },
+          { label: labels[1], kind: 'image', description: labels[1], box: { x: 0, y: 0.5, w: 1, h: 0.5 } },
+        ],
+      });
+    parser.set(a, doors(['ornate door', 'red door']));
+    const first = await publish(a, 1, ip(1));
+    const b = await shot(2, 520);
+    parser.set(b, doors(['golden gate', 'fleshy archway'])); // same pictures, described differently
+    const again = await publish(b, 1, ip(2));
+    expect(again).toMatchObject({ questionId: first.questionId, merged: true, disputed: false });
+    expect(question(first.questionId).submissionCount).toBe(2);
   });
 });

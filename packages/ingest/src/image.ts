@@ -70,3 +70,46 @@ export async function cropBox(
     return null;
   }
 }
+
+/**
+ * 64-bit difference hash of an image as 16 hex characters. Similar-looking images
+ * give hashes that differ in only a few bits, whatever their size or compression.
+ * The outer edge is trimmed first so a slightly different crop still matches.
+ */
+export async function dHash(bytes: Uint8Array): Promise<string | null> {
+  try {
+    const size = await imageSize(bytes);
+    if (!size) return null;
+    const mx = Math.floor(size.width * 0.06);
+    const my = Math.floor(size.height * 0.06);
+    const px = await sharp(bytes)
+      .extract({ left: mx, top: my, width: size.width - 2 * mx, height: size.height - 2 * my })
+      .grayscale()
+      .resize(9, 8, { fit: 'fill' })
+      .raw()
+      .toBuffer();
+    let hex = '';
+    for (let row = 0; row < 8; row++) {
+      let byte = 0;
+      for (let col = 0; col < 8; col++) byte = (byte << 1) | (px[row * 9 + col]! > px[row * 9 + col + 1]! ? 1 : 0);
+      hex += byte.toString(16).padStart(2, '0');
+    }
+    return hex;
+  } catch {
+    return null;
+  }
+}
+
+/** Number of differing bits between two dHash values (0 = identical, 64 = opposite). */
+export function hamming(a: string, b: string): number {
+  if (a.length !== b.length) return 64;
+  let n = 0;
+  for (let i = 0; i < a.length; i += 2) {
+    let x = parseInt(a.slice(i, i + 2), 16) ^ parseInt(b.slice(i, i + 2), 16);
+    while (x) {
+      n += x & 1;
+      x >>= 1;
+    }
+  }
+  return n;
+}

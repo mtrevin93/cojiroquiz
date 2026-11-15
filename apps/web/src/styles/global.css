@@ -2058,3 +2058,20 @@ h1.qcard-text {
     animation: none;
   }
 }
+
+/* picture that is part of the question ("Where is this?") */
+.qcard-picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  margin: 0 0 12px;
+  object-fit: cover;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: #000;
+}
+.qpage .qcard-picture {
+  max-height: 420px;
+  margin-bottom: 16px;
+}

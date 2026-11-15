@@ -103,6 +103,9 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
         </div>
       )}
       <a className="qcard-link" href={href}>
+        {entry.pictureUrl && (
+          <img className="qcard-picture" src={entry.pictureUrl} alt="Picture shown with the question" loading="lazy" decoding="async" />
+        )}
         <p className="qcard-text" lang={entry.lang}>
           <QuestionText text={entry.questionText} />
         </p>

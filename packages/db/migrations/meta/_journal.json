@@ -15,6 +15,13 @@
       "when": 1794684000424,
       "tag": "0001_workable_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794753707927,
+      "tag": "0002_silky_sauron",
+      "breakpoints": true
     }
   ]
 }

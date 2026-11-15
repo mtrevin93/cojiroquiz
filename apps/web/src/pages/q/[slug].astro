@@ -25,7 +25,7 @@ const answerText = choiceText(answer);
 const short = oneLine(q.questionText, 70);
 const title = `${short} Answer: ${oneLine(answerWords(answerText), 30)}`;
 const description = `Answer: ${answerWords(answerText)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
-const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
+const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? null;
 ---
 
 <Base
@@ -51,6 +51,14 @@ const ogImage = q.answerImage?.url ?? q.questionImage?.url ?? null;
 
     <article class="qcard">
       <div class="qcard-body">
+        {q.pictureUrl && (
+          <img
+            class="qcard-picture"
+            src={q.pictureUrl}
+            alt={q.pictureDescription ? `Picture shown with the question: ${q.pictureDescription}` : 'Picture shown with the question'}
+            decoding="async"
+          />
+        )}
         <h1 class="qcard-text" lang={q.lang}><QuestionText text={q.questionText} /></h1>
       </div>
       <div class="qcard-foot">

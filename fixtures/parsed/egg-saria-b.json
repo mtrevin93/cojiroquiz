@@ -5,10 +5,35 @@
   "level": "Egg Level",
   "questionNumber": 1,
   "questionText": "R A Y R A Y\nThis is the music score for Saria's Song.",
+  "questionImage": null,
   "choices": [
-    { "label": "X", "kind": "symbol", "description": null, "box": { "x": 0.038, "y": 0.649, "w": 0.925, "h": 0.144 } },
-    { "label": "✓", "kind": "symbol", "description": null, "box": { "x": 0.038, "y": 0.804, "w": 0.925, "h": 0.144 } }
+    {
+      "label": "X",
+      "kind": "symbol",
+      "description": null,
+      "box": {
+        "x": 0.038,
+        "y": 0.649,
+        "w": 0.925,
+        "h": 0.144
+      }
+    },
+    {
+      "label": "✓",
+      "kind": "symbol",
+      "description": null,
+      "box": {
+        "x": 0.038,
+        "y": 0.804,
+        "w": 0.925,
+        "h": 0.144
+      }
+    }
   ],
-  "reveal": { "present": false, "correctIndex": null, "selectedIndex": null },
+  "reveal": {
+    "present": false,
+    "correctIndex": null,
+    "selectedIndex": null
+  },
   "confidence": "high"
 }
