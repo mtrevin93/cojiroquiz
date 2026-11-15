@@ -2455,3 +2455,22 @@ dialog.modal legend {
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+/* review screen on phones: the upload count drops under the choice instead of squeezing it */
+.review-choice-text {
+  overflow-wrap: break-word;
+}
+@media (max-width: 600px) {
+  .review-choice {
+    flex-wrap: wrap;
+  }
+  .review-choice-text {
+    flex: 1 1 0;
+    min-width: 8ch;
+  }
+  .review-votes {
+    flex-basis: 100%;
+    padding-left: 32px;
+    text-align: left;
+  }
+}
