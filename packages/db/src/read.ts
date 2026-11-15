@@ -162,6 +162,9 @@ function toSearchEntry(row: Row, urlFor: UrlFor): SearchEntry {
     level: v.level,
     questionText: v.questionText,
     pictureUrl: v.pictureUrl,
+    choicePictures: v.choices.every((c) => c.imageUrl)
+      ? v.choices.map((c, i) => ({ url: c.imageUrl!, label: choiceText(c), correct: i === v.answerIndex }))
+      : [],
     searchText: row.q.searchText,
     answerLabel: choiceText(answer),
     answerImageUrl: v.answerImage?.url ?? null,

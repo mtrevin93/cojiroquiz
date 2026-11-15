@@ -2075,3 +2075,49 @@ h1.qcard-text {
   max-height: 420px;
   margin-bottom: 16px;
 }
+
+/* picture choices on a card: every choice, the correct one outlined in gold */
+.choice-pics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+}
+.choice-pics li {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  opacity: 0.55;
+}
+.choice-pics li.is-right {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 24px -8px rgb(236 201 111 / 0.7);
+  opacity: 1;
+}
+.choice-pics img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.choice-pics-mark {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f3d584, #c2933a);
+  color: #241807;
+}
+.choice-pics-mark .answer-check {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}

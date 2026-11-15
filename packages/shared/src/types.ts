@@ -93,6 +93,8 @@ export interface SearchIndexEntry {
   questionText: string;
   /** The picture that is part of the question itself, if it has one. */
   pictureUrl: string | null;
+  /** When the choices are pictures: every choice's picture, with the correct one flagged. */
+  choicePictures: Array<{ url: string; label: string; correct: boolean }>;
   searchText: string;
   answerLabel: string;
   answerImageUrl: string | null;

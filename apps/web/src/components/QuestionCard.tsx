@@ -110,8 +110,26 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
           <QuestionText text={entry.questionText} />
         </p>
       </a>
+      {entry.choicePictures.length > 0 && (
+        <ul className="choice-pics" aria-label="Choices">
+          {entry.choicePictures.map((c, i) => (
+            <li key={i} className={c.correct ? 'is-right' : undefined}>
+              <img src={c.url} alt={c.correct ? `${c.label} (correct answer)` : c.label} loading="lazy" decoding="async" />
+              {c.correct && (
+                <span className="choice-pics-mark">
+                  <CheckIcon />
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="qcard-answer">
-        <AnswerBox label={entry.answerLabel} choiceImageUrl={entry.answerChoiceImageUrl} lang={entry.lang} />
+        <AnswerBox
+          label={entry.answerLabel}
+          choiceImageUrl={entry.choicePictures.length > 0 ? null : entry.answerChoiceImageUrl}
+          lang={entry.lang}
+        />
         {entry.answerImageUrl && (
           <a className="reveal-shot" href={href} title="Result screenshot">
             <img
