@@ -3,7 +3,7 @@ import { choiceText, listFeedback, listQuarantine, listRecentQuestions, listRepo
 import { questionPath } from '../../components/QuestionCard.tsx';
 import Base from '../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../lib/page.ts';
-import { buildSearchText } from '@cojiro/shared';
+import { buildSearchText, canonical } from '@cojiro/shared';
 import { answerWords } from '../../lib/seo.ts';
 import { REPORT_REASON_LABELS } from '../../lib/text.ts';
 
@@ -26,6 +26,15 @@ const thumbs = new Map<number, string | null>(
 );
 const questions = listRecentQuestions(db, urlFor, 500);
 const feedback = listFeedback(db, 100);
+
+// Questions that share their wording, so likely duplicates stand out in the grid.
+const sameText = new Map<string, number[]>();
+for (const q of questions) {
+  const k = `${q.lang}\u001f${canonical(q.questionText)}`;
+  sameText.set(k, [...(sameText.get(k) ?? []), q.id]);
+}
+const twinsOf = (q: { id: number; lang: string; questionText: string }) =>
+  (sameText.get(`${q.lang}\u001f${canonical(q.questionText)}`) ?? []).filter((id) => id !== q.id);
 const msg = Astro.url.searchParams.get('msg');
 const error = Astro.url.searchParams.get('error');
 
@@ -193,7 +202,7 @@ function prefill(parsed: unknown) {
     <ul class="qgrid">
       {questions.map((q) => {
         const shot = q.answerImage?.url ?? q.questionImage?.url ?? null;
-        const search = buildSearchText([q.questionText, `#${q.id}`, q.pictureDescription, ...q.choices.map((c) => c.label), ...q.choices.map((c) => c.description)]);
+        const search = buildSearchText([q.questionText, `#${q.id}`, twinsOf(q).length > 0 ? 'same text duplicate' : null, q.pictureDescription, ...q.choices.map((c) => c.label), ...q.choices.map((c) => c.description)]);
         return (
           <li class:list={['qtile', q.hidden && 'is-hidden']} data-search={search}>
             <label class="qtile-pick">
@@ -207,6 +216,12 @@ function prefill(parsed: unknown) {
                 <span class="tag">{q.submissionCount} ✓</span>
                 {shot && <a class="tag" href={shot} target="_blank" rel="noopener noreferrer">Screenshot</a>}
               </div>
+              {twinsOf(q).length > 0 && (
+                <p class="qtile-twin">
+                  Same text as {twinsOf(q).map((id) => `#${id}`).join(', ')}
+                  {q.id < Math.max(...twinsOf(q)) ? ' · older copy' : ' · newest'}
+                </p>
+              )}
               {q.pictureUrl && <img class="qtile-picture" src={q.pictureUrl} alt={q.pictureDescription ?? ''} loading="lazy" decoding="async" />}
               <p class="qtile-text" lang={q.lang}>{q.questionText}</p>
               <ol class="qtile-choices" lang={q.lang}>

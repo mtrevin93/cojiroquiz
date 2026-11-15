@@ -2338,3 +2338,13 @@ h1.qcard-text {
   object-fit: cover;
   border-radius: 5px;
 }
+.qtile-twin {
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid rgb(224 154 148 / 0.5);
+  border-radius: 8px;
+  background: rgb(224 154 148 / 0.08);
+  color: var(--wrong);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
