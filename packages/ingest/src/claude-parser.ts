@@ -103,7 +103,9 @@ export function createClaudeParser(opts: ClaudeParserOptions = {}): QuizParser {
       const response = await client.messages.parse({
         model,
         max_tokens: 16000,
-        system: PARSE_SYSTEM_PROMPT,
+        // The instructions are identical for every read, so cache them: repeat reads within
+        // a few minutes pay a fraction of the price for this part.
+        system: [{ type: 'text', text: PARSE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
         messages: [
           {
             role: 'user',
@@ -122,6 +124,11 @@ export function createClaudeParser(opts: ClaudeParserOptions = {}): QuizParser {
         ],
         output_config: { format: zodOutputFormat(ParsedQuiz) },
       });
+      // One line per read, so spend can be added up from the logs.
+      const u = response.usage;
+      console.log(
+        `[parse] model=${model} input=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_write=${u.cache_creation_input_tokens ?? 0} output=${u.output_tokens}`,
+      );
       if (response.stop_reason === 'refusal') throw new Error('Parser model declined to read this image');
       if (response.stop_reason === 'max_tokens') throw new Error('Parser output was cut off (max_tokens)');
       if (!response.parsed_output) throw new Error('Parser returned no structured output');
