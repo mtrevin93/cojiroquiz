@@ -2979,3 +2979,12 @@ dialog.modal {
   border: 2px solid var(--line-strong);
   border-radius: 8px;
 }
+
+.mascot {
+  width: 148px;
+  filter: drop-shadow(0 4px 0 rgb(0 0 0 / 0.45));
+}
+.wordmark .mark {
+  border: 2px solid #2b3a8c;
+  background: #0f1b4a;
+}
