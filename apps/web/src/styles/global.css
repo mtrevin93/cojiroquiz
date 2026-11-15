@@ -738,7 +738,8 @@ dialog.modal::backdrop {
 /* ---------- prose pages ---------- */
 
 .prose {
-  padding: 20px 0;
+  padding-top: 20px;
+  padding-bottom: 20px;
 }
 .prose p,
 .prose li {
@@ -2330,4 +2331,15 @@ h1.qcard-text {
 .qtile-btn.is-danger:hover {
   background: #7a2a2a;
   color: #fff;
+}
+
+/* cards keep their natural height: no empty space padded into short ones */
+.card-grid {
+  align-items: start;
+}
+.review-page details {
+  margin-top: 14px;
+}
+.review-page .qcard-meta:empty {
+  display: none;
 }

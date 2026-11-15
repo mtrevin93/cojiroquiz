@@ -1,6 +1,6 @@
 ---
 import { canonical } from '@cojiro/shared';
-import { choiceText, getQuestionById, listEvidence, listReportsForQuestion } from '@cojiro/db';
+import { choiceText, choiceVoteText, getQuestionById, listEvidence, listReportsForQuestion } from '@cojiro/db';
 import { QuestionText, questionPath } from '../../../components/QuestionCard.tsx';
 import Base from '../../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../../lib/page.ts';
@@ -22,12 +22,12 @@ const error = Astro.url.searchParams.get('error');
 
 // How many uploads back each choice, and how many of those were read from a result screen.
 const tally = q.choices.map((c) => {
-  const canon = canonical(choiceText(c));
+  const canon = canonical(choiceVoteText(c));
   const rows = evidence.filter((e) => e.answerCanonical === canon);
   return { total: rows.length, reveal: rows.filter((e) => e.answerSource === 'reveal').length };
 });
 const labelFor = (canon: string) => {
-  const c = q.choices.find((x) => canonical(choiceText(x)) === canon);
+  const c = q.choices.find((x) => canonical(choiceVoteText(x)) === canon);
   return c ? choiceText(c) : canon;
 };
 ---
@@ -47,7 +47,7 @@ const labelFor = (canon: string) => {
       {q.hidden && <span class="tag hidden-tag">Hidden</span>}
       {q.disputed && <span class="tag disputed">Disputed</span>}
       {q.answerLocked && <span class="tag">Answer set by you</span>}
-      <span class="tag">{open.length} open {open.length === 1 ? 'report' : 'reports'}</span>
+      {open.length > 0 && <span class="tag disputed">{open.length} open {open.length === 1 ? 'report' : 'reports'}</span>}
     </div>
 
     <form class="review-form" method="post" action="/api/admin/review-set-answer">
@@ -75,7 +75,7 @@ const labelFor = (canon: string) => {
         </label>
       )}
       <div class="admin-actions">
-        <button class="btn" type="submit">Save answer and close reports</button>
+        <button class="btn" type="submit">{open.length > 0 ? 'Save answer and close reports' : 'Save answer'}</button>
       </div>
     </form>
     <div class="admin-actions">
@@ -114,8 +114,7 @@ const labelFor = (canon: string) => {
       </form>
     </details>
 
-    <h2>Reports</h2>
-    {reports.length === 0 && <p class="muted">No reports.</p>}
+    {reports.length > 0 && <h2>Reports</h2>}
     <ul class="admin-list">
       {reports.map((r) => (
         <li class="admin-item">

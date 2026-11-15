@@ -175,6 +175,14 @@ function toSearchEntry(row: Row, urlFor: UrlFor): SearchEntry {
   };
 }
 
+/**
+ * The text a vote for this choice is recorded under (submissions.answer_canonical is the
+ * canonical form of this): a picture choice's description, otherwise the label.
+ */
+export function choiceVoteText(c: Pick<StoredChoice, 'label' | 'kind' | 'description'>): string {
+  return c.kind === 'image' ? c.description || c.label : c.label;
+}
+
 /** The public card's data for one question (admin pages render the same card as visitors see). */
 export function entryFromView(v: QuestionView): SearchEntry {
   const answer = v.choices[v.answerIndex];
