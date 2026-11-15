@@ -124,25 +124,31 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
           ))}
         </ul>
       )}
-      <div className="qcard-answer">
-        <AnswerBox
-          label={entry.answerLabel}
-          choiceImageUrl={entry.choicePictures.length > 0 ? null : entry.answerChoiceImageUrl}
-          lang={entry.lang}
-        />
-        {entry.answerImageUrl && (
-          <a className="reveal-shot" href={href} title="Result screenshot">
-            <img
-              src={entry.answerImageUrl}
-              alt={`Screenshot showing the correct answer “${entry.answerLabel}” to: ${oneLine(entry.questionText, 90)}`}
-              width={w}
-              height={h}
-              loading="lazy"
-              decoding="async"
-            />
-          </a>
-        )}
-      </div>
+      {entry.choicePictures.length > 0 ? (
+        <div className="qcard-answer">
+          <AnswerBox label={entry.answerLabel} choiceImageUrl={null} lang={entry.lang} />
+        </div>
+      ) : (
+        <ul className="opts" lang={entry.lang} aria-label="Choices">
+          {entry.options.map((o, i) => {
+            const d = answerDisplay(o.label);
+            return (
+              <li key={i} className={o.correct ? 'is-right' : undefined}>
+                {o.correct && (
+                  <span className="opts-mark">
+                    <CheckIcon />
+                  </span>
+                )}
+                <span>
+                  {d.text}
+                  {d.symbol && <span className="answer-symbol"> ({d.symbol})</span>}
+                  {o.correct && <span className="sr-only"> (correct answer)</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </article>
   );
 }

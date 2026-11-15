@@ -95,6 +95,8 @@ export interface SearchIndexEntry {
   pictureUrl: string | null;
   /** When the choices are pictures: every choice's picture, with the correct one flagged. */
   choicePictures: Array<{ url: string; label: string; correct: boolean }>;
+  /** Every choice in the order shown, with the correct one flagged. */
+  options: Array<{ label: string; correct: boolean }>;
   searchText: string;
   answerLabel: string;
   answerImageUrl: string | null;

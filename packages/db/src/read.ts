@@ -165,6 +165,7 @@ function toSearchEntry(row: Row, urlFor: UrlFor): SearchEntry {
     choicePictures: v.choices.every((c) => c.imageUrl)
       ? v.choices.map((c, i) => ({ url: c.imageUrl!, label: choiceText(c), correct: i === v.answerIndex }))
       : [],
+    options: v.choices.map((c, i) => ({ label: choiceText(c), correct: i === v.answerIndex })),
     searchText: row.q.searchText,
     answerLabel: choiceText(answer),
     answerImageUrl: v.answerImage?.url ?? null,
@@ -196,6 +197,7 @@ export function entryFromView(v: QuestionView): SearchEntry {
     choicePictures: v.choices.every((c) => c.imageUrl)
       ? v.choices.map((c, i) => ({ url: c.imageUrl!, label: choiceText(c), correct: i === v.answerIndex }))
       : [],
+    options: v.choices.map((c, i) => ({ label: choiceText(c), correct: i === v.answerIndex })),
     searchText: '',
     answerLabel: choiceText(answer),
     answerImageUrl: v.answerImage?.url ?? null,
