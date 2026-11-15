@@ -2333,9 +2333,9 @@ h1.qcard-text {
   color: #fff;
 }
 
-/* cards keep their natural height: no empty space padded into short ones */
+/* every card in a row is the same height, with the answers along one line at the bottom */
 .card-grid {
-  align-items: start;
+  align-items: stretch;
 }
 .review-page details {
   margin-top: 14px;
