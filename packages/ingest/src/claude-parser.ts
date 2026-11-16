@@ -62,6 +62,8 @@ These are pictures from The Legend of Zelda: Ocarina of Time. Name what a pictur
 
 When the choices are several pictures of the same kind of thing (four doors, two houses), the label must say what tells this one apart from the others, in a few words: "door with pots", "house with chests", "house with hearts". Do not describe background scenery. If you are not sure what something is, say plainly what it looks like in two to four words ("brown nut with holes", "orange mask with fangs"). A plain description is always acceptable; a wrong proper name is a serious error, because players rely on these names. Do not let the question text or the other choices push you into a name: a question about masks can include choices that are not masks.
 
+One exception, and only for the choice the game marks as correct: when the question itself names what is being asked for ("Which of these is Medigoron?", "Which of these is a Keese?", "Which is the Potion Shop's door?") and the result shows which choice is correct, label that correct choice with the question's own words ("Medigoron", "Keese", "Potion Shop's door"). The game has told you what it is. The other choices keep plain descriptions unless you clearly recognise them.
+
 # Reveal state
 
 After the player answers, the game marks the choices. Read this carefully, because it decides which answer gets published:
