@@ -648,3 +648,62 @@ describe('uploader names for picture choices', () => {
     expect(q.searchText).toContain('skull mask');
   });
 });
+
+describe('merge on answer', () => {
+  const song = (labels: string[]) =>
+    quiz({
+      questionText: 'Which song does this character teach to Link?',
+      choices: labels.map((label) => ({ label, kind: 'text' as const, description: null, box: null })),
+    });
+  const up = async (labels: string[], answer: string, who: number) => {
+    const b = await png();
+    parser.set(b, song(labels));
+    return publish(b, labels.indexOf(answer), ip(who));
+  };
+
+  it('the same question with a different choice set and the same answer is one question, keeping the fuller set', async () => {
+    const two = await up(["Saria's Song", "Epona's Song"], "Epona's Song", 1);
+    const four = await up(['Scarecrow Song', "Saria's Song", "Sun's Song", "Epona's Song"], "Epona's Song", 2);
+    expect(four).toMatchObject({ questionId: two.questionId, merged: true, disputed: false });
+    let q = question(two.questionId);
+    expect(q.choices.map((c) => c.label)).toEqual(['Scarecrow Song', "Saria's Song", "Sun's Song", "Epona's Song"]);
+    expect(q.choices[q.answerIndex]!.label).toBe("Epona's Song");
+    expect(q.submissionCount).toBe(2);
+
+    // the short version again: still the same question, and the fuller set stays
+    const again = await up(["Epona's Song", "Saria's Song"], "Epona's Song", 3);
+    expect(again).toMatchObject({ questionId: two.questionId, merged: true, disputed: false });
+    q = question(two.questionId);
+    expect(q.choices).toHaveLength(4);
+    expect(q.submissionCount).toBe(3);
+    expect(count(schema.questions)).toBe(1);
+  });
+
+  it('a different choice set with a different answer stays a separate question', async () => {
+    const a = await up(["Saria's Song", "Epona's Song"], "Epona's Song", 1);
+    const b = await up(["Saria's Song", "Sun's Song", 'Song of Storms'], "Saria's Song", 2);
+    expect(b.merged).toBe(false);
+    expect(b.questionId).not.toBe(a.questionId);
+  });
+
+  it('finds and merges duplicates that were stored before this rule', async () => {
+    const keep = await up(['Scarecrow Song', "Saria's Song", "Sun's Song", "Epona's Song"], "Epona's Song", 1);
+    const q = question(keep.questionId);
+    // an older row for the same question with two choices
+    const old = db
+      .insert(schema.questions)
+      .values({ ...q, id: undefined as never, slug: 'old-dup', dedupeKey: 'old-dup', choices: [q.choices[3]!, q.choices[1]!], answerIndex: 0 })
+      .returning()
+      .get();
+    db.insert(schema.submissions).values({ questionId: old.id, imageId: null, parsed: null, answerCanonical: 'epona s song', answerSource: 'manual', ipHash: 'ip-9', createdAt: clock }).run();
+
+    expect(await ingest.listDuplicates()).toEqual([{ keepId: keep.questionId, dropId: old.id }]);
+    expect(await ingest.mergeDuplicate(old.id, keep.questionId)).toBe(false); // wrong way round: refused
+    expect(await ingest.mergeDuplicate(keep.questionId, old.id)).toBe(true);
+    expect(count(schema.questions)).toBe(1);
+    const after = question(keep.questionId);
+    expect(after.submissionCount).toBe(2);
+    expect(after.disputed).toBe(false);
+    expect(await ingest.listDuplicates()).toEqual([]);
+  });
+});

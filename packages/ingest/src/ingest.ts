@@ -8,7 +8,9 @@ import {
   findImageBySha,
   findQuarantineBySha,
   findQuestionByDedupeKey,
+  absorbQuestion,
   getQuestion,
+  listAllQuestions,
   listQuestionsByTextKey,
   renameVotes,
   findQuestionForImage,
@@ -44,6 +46,7 @@ import {
   canonical,
   dedupeMaterial,
   joinSpacedLetters,
+  langKey,
 } from '@cojiro/shared';
 import { checkImage, cropBox, dHash, hamming, imageSize, processScreenshot } from './image.ts';
 import type { QuizParser } from './parser.ts';
@@ -159,15 +162,49 @@ function matchQuestion(q: QuestionRow, choices: ChoiceLike[], v: Visual): number
   return map;
 }
 
+const samePicture = (a: string | null | undefined, b: string | null | undefined): boolean =>
+  (a == null && b == null) || (!!a && !!b && hamming(a, b) <= MATCH_BITS);
+
+/** Is an uploaded choice the stored choice `b`? Pictures by look, text by wording. */
+function sameChoice(a: ChoiceLike, aPhash: string | null | undefined, b: StoredChoice): boolean {
+  if ((a.kind === 'image') !== (b.kind === 'image')) return false;
+  if (a.kind === 'image') {
+    if (aPhash && b.phash) return hamming(aPhash, b.phash) <= MATCH_BITS;
+    return canonical(choiceText(a)) === canonical(choiceText(b));
+  }
+  return canonical(a.label) === canonical(b.label);
+}
+
+type Match =
+  /** Same wording, picture and choice set. `map[i]` is the stored index of uploaded choice i. */
+  | { question: QuestionRow; mode: 'same-set'; map: number[] }
+  /** Same wording and picture, a different choice set, and the same correct answer. */
+  | { question: QuestionRow; mode: 'same-answer' };
+
+/**
+ * Find the stored question an upload belongs to. The game shows one question with different
+ * choice sets (two choices at one level, four at another), so beyond an exact match on the
+ * choices, an upload also belongs to a question with the same wording, picture and answer.
+ */
 function findMatch(
-  db: Parameters<typeof listQuestionsByTextKey>[0],
-  textKey: string,
-  choices: ChoiceLike[],
-  v: Visual,
-): { question: QuestionRow; map: number[] } | undefined {
-  for (const question of listQuestionsByTextKey(db, textKey)) {
-    const map = matchQuestion(question, choices, v);
-    if (map) return { question, map };
+  db: Parameters<typeof listAllQuestions>[0],
+  c: { lang: string; questionText: string; choices: ChoiceLike[]; visual: Visual; answerIndex: number | null },
+): Match | undefined {
+  const wording = canonical(c.questionText);
+  const lang = langKey(c.lang);
+  const candidates = listAllQuestions(db).filter(
+    (q) => langKey(q.lang) === lang && canonical(q.questionText) === wording && samePicture(q.picturePhash, c.visual.picturePhash),
+  );
+  for (const question of candidates) {
+    const map = matchQuestion(question, c.choices, c.visual);
+    if (map) return { question, mode: 'same-set', map };
+  }
+  const answer = c.answerIndex == null ? undefined : c.choices[c.answerIndex];
+  if (answer) {
+    for (const question of candidates) {
+      const stored = question.choices[question.answerIndex];
+      if (stored && sameChoice(answer, c.visual.choicePhashes[c.answerIndex!], stored)) return { question, mode: 'same-answer' };
+    }
   }
   return undefined;
 }
@@ -200,6 +237,38 @@ function detectedAnswer(parsed: ParsedQuiz): number | null {
   return parsed.reveal.present && validIndex(parsed.reveal.correctIndex, parsed.choices.length)
     ? parsed.reveal.correctIndex
     : null;
+}
+
+const storedVisual = (q: QuestionRow): Visual => ({ picturePhash: q.picturePhash ?? null, choicePhashes: q.choices.map((c) => c.phash ?? null) });
+
+/**
+ * Stored questions that count as one: same language, wording and picture, and either the same
+ * choice set or the same correct answer. The one with more choices is kept (then more uploads, then older).
+ */
+function duplicatePairs(db: Parameters<typeof listAllQuestions>[0]): Array<{ keep: QuestionRow; drop: QuestionRow }> {
+  const groups = new Map<string, QuestionRow[]>();
+  for (const q of listAllQuestions(db)) {
+    const k = `${langKey(q.lang)}\u001f${canonical(q.questionText)}`;
+    groups.set(k, [...(groups.get(k) ?? []), q]);
+  }
+  const pairs: Array<{ keep: QuestionRow; drop: QuestionRow }> = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const ranked = [...group].sort((a, b) => b.choices.length - a.choices.length || b.submissionCount - a.submissionCount || a.id - b.id);
+    const kept: QuestionRow[] = [];
+    for (const q of ranked) {
+      const twin = kept.find((k) => {
+        if (!samePicture(k.picturePhash, q.picturePhash)) return false;
+        if (matchQuestion(k, q.choices, storedVisual(q))) return true;
+        const a = q.choices[q.answerIndex];
+        const b = k.choices[k.answerIndex];
+        return !!a && !!b && sameChoice(a, a.phash, b);
+      });
+      if (twin) pairs.push({ keep: twin, drop: q });
+      else kept.push(q);
+    }
+  }
+  return pairs;
 }
 
 /** Crops made from a screenshot at upload time (stored on the draft). */
@@ -289,15 +358,39 @@ function insertOrMerge(tx: Tx, c: Candidate, now: number): ConfirmResult {
   const chosen = c.choices[c.answerIndex];
   if (!chosen) throw new IngestError('invalid_answer', 'answerIndex does not match any choice.');
   const textKey = computeDedupeKey(c.lang, c.questionText, c.choices);
-  const match = findMatch(tx, textKey, c.choices, c.visual);
+  const hashes = [c.visual.picturePhash, ...c.visual.choicePhashes].filter((h): h is string => !!h);
+  const keyFor = () => {
+    const k = hashes.length ? sha256Hex([textKey, c.visual.picturePhash ?? '', ...c.visual.choicePhashes.filter(Boolean).sort()].join(':')) : textKey;
+    return findQuestionByDedupeKey(tx, k) ? sha256Hex(`${k}:${randomUUID()}`) : k;
+  };
+  const match = findMatch(tx, { lang: c.lang, questionText: c.questionText, choices: c.choices, visual: c.visual, answerIndex: c.answerIndex });
   let question = match?.question;
   const merged = question !== undefined;
-  // Vote for the stored question's own wording of the chosen choice, so votes from
-  // different uploads of the same picture choice add up.
-  const answerCanonical = canonical(choiceText(match ? match.question.choices[match.map[c.answerIndex]!]! : chosen));
-  const hashes = [c.visual.picturePhash, ...c.visual.choicePhashes].filter((h): h is string => !!h);
-  let dedupeKey = hashes.length ? sha256Hex([textKey, c.visual.picturePhash ?? '', ...c.visual.choicePhashes.filter(Boolean).sort()].join(':')) : textKey;
-  if (!merged && findQuestionByDedupeKey(tx, dedupeKey)) dedupeKey = sha256Hex(`${dedupeKey}:${randomUUID()}`);
+  let answerCanonical = canonical(choiceText(chosen));
+  if (match?.mode === 'same-set') {
+    // Vote for the stored question's own wording of the chosen choice, so votes from
+    // different uploads of the same picture choice add up.
+    answerCanonical = canonical(choiceText(match.question.choices[match.map[c.answerIndex]!]!));
+  } else if (match?.mode === 'same-answer') {
+    const q = match.question;
+    const storedAnswer = canonical(choiceText(q.choices[q.answerIndex]!));
+    if (c.choices.length > q.choices.length) {
+      // This upload shows more choices for the same question: keep the fuller set.
+      if (storedAnswer !== answerCanonical) renameVotes(tx, q.id, storedAnswer, answerCanonical);
+      updateQuestion(tx, q.id, {
+        choices: c.choices,
+        answerIndex: c.answerIndex,
+        questionImageId: c.imageId ?? q.questionImageId,
+        searchText: buildSearchText([q.questionText, q.level, ...c.choices.map((x) => x.label), ...c.choices.map((x) => x.description), q.pictureDescription]),
+        textKey,
+        dedupeKey: keyFor(),
+      });
+      question = getQuestion(tx, q.id)!;
+    } else {
+      answerCanonical = storedAnswer;
+    }
+  }
+  const dedupeKey = merged ? '' : keyFor();
   if (!question) {
     const inserted = insertQuestion(tx, {
       slug: `tmp-${randomUUID()}`,
@@ -401,8 +494,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
   }
 
   function toDraftDTO(draftId: string, parsed: ParsedQuiz, crops: DraftCrops): DraftDTO {
-    const textKey = computeDedupeKey(parsed.lang, parsed.questionText, parsed.choices);
-    const match = findMatch(db, textKey, parsed.choices, visualOf(crops));
+    const match = findMatch(db, { lang: parsed.lang, questionText: parsed.questionText, choices: parsed.choices, visual: visualOf(crops), answerIndex: detectedAnswer(parsed) });
     const existing = match?.question;
     return {
       draftId,
@@ -589,6 +681,25 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
         throw new IngestError('rate_limited', 'Too many uploads. Try again later.');
       }
       return db.transaction((tx) => insertOrMerge(tx, candidate, now()));
+    },
+
+    async listDuplicates() {
+      return duplicatePairs(db).map(({ keep, drop }) => ({ keepId: keep.id, dropId: drop.id }));
+    },
+
+    async mergeDuplicate(keepId, dropId) {
+      return db.transaction((tx) => {
+        const pair = duplicatePairs(tx).find((p) => p.keep.id === keepId && p.drop.id === dropId);
+        if (!pair) return false;
+        const { keep, drop } = pair;
+        // The dropped question's votes for its answer become votes for the kept question's answer.
+        const from = canonical(choiceText(drop.choices[drop.answerIndex]!));
+        const to = canonical(choiceText(keep.choices[keep.answerIndex]!));
+        if (from !== to) renameVotes(tx, drop.id, from, to);
+        absorbQuestion(tx, keep.id, drop.id);
+        recount(tx, getQuestion(tx, keep.id)!, now());
+        return true;
+      });
     },
 
     async relabelPictures(questionId) {

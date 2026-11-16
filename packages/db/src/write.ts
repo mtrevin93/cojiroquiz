@@ -4,7 +4,7 @@
 import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
 import type { AnswerSource, Bucket, ParsedQuiz, StoredChoice } from '@cojiro/shared';
 import type { Db } from './client.ts';
-import { drafts, images, quarantine, questions, rateEvents, submissions } from './schema.ts';
+import { drafts, images, quarantine, questions, rateEvents, reports, submissions } from './schema.ts';
 import type { DraftVisual } from './schema.ts';
 
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -85,6 +85,17 @@ export function listQuestionsByTextKey(db: DbOrTx, textKey: string): QuestionRow
   return db.select().from(questions).where(eq(questions.textKey, textKey)).all();
 }
 
+export function listAllQuestions(db: DbOrTx): QuestionRow[] {
+  return db.select().from(questions).all();
+}
+
+/** Move every upload and report from one question to another, then delete the emptied question. */
+export function absorbQuestion(db: DbOrTx, keepId: number, dropId: number): void {
+  db.update(submissions).set({ questionId: keepId }).where(eq(submissions.questionId, dropId)).run();
+  db.update(reports).set({ questionId: keepId }).where(eq(reports.questionId, dropId)).run();
+  db.delete(questions).where(eq(questions.id, dropId)).run();
+}
+
 export function getQuestion(db: DbOrTx, id: number): QuestionRow | undefined {
   return db.select().from(questions).where(eq(questions.id, id)).get();
 }
@@ -124,6 +135,8 @@ export function updateQuestion(
       | 'level'
       | 'choices'
       | 'searchText'
+      | 'textKey'
+      | 'dedupeKey'
       | 'pictureDescription'
       | 'answerIndex'
       | 'answerSource'

@@ -36,6 +36,17 @@ export const POST: APIRoute = async (ctx) => {
   };
   const toAdmin = (section: string, msg: string, error = false) =>
     ctx.redirect(`/admin?${error ? 'error' : 'msg'}=${encodeURIComponent(msg)}#${section}`, 303);
+  if (action === 'duplicates-merge') {
+    const ingest = await getIngest();
+    if (!ingest) return toAdmin('duplicates', UPLOADS_UNAVAILABLE, true);
+    const keepId = Number(str('keep'));
+    const dropId = Number(str('drop'));
+    // "all" merges every pair the finder currently lists; otherwise just the one named.
+    const pairs = str('all') === '1' ? await ingest.listDuplicates() : [{ keepId, dropId }];
+    let done = 0;
+    for (const p of pairs) if (await ingest.mergeDuplicate(p.keepId, p.dropId)) done++;
+    return toAdmin('duplicates', done ? `Merged ${done} ${done === 1 ? 'duplicate' : 'duplicates'}.` : 'Nothing to merge.', done === 0);
+  }
   if (action === 'questions-delete') {
     const ids = [...new Set(form.getAll('ids').map((v) => Number(v)))].filter((n) => Number.isSafeInteger(n) && n > 0);
     if (ids.length === 0) return toAdmin('questions', 'Nothing selected.', true);

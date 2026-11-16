@@ -168,6 +168,10 @@ export interface IngestService {
   submitManual(input: ManualInput, meta: RequestMeta): Promise<ConfirmResult>;
   /** Admin: re-read a question's screenshot and refresh the names of its pictures. Returns false if nothing could be changed. */
   relabelPictures(questionId: number): Promise<boolean>;
+  /** Admin: pairs of questions that count as the same one (same wording, same picture, same answer or same choices). */
+  listDuplicates(): Promise<Array<{ keepId: number; dropId: number }>>;
+  /** Admin: fold `dropId` into `keepId` (uploads and reports move over). False if they no longer match. */
+  mergeDuplicate(keepId: number, dropId: number): Promise<boolean>;
   /** Admin: publish a quarantined upload by hand. */
   promoteQuarantined(quarantineId: number, input: ManualInput, meta: RequestMeta): Promise<ConfirmResult>;
 }

@@ -4,6 +4,7 @@ import { QuestionText, questionPath } from '../../components/QuestionCard.tsx';
 import { CheckIcon } from '../../components/icons.tsx';
 import Base from '../../layouts/Base.astro';
 import { formatDate, pageContext } from '../../lib/page.ts';
+import { getIngest } from '../../lib/services.ts';
 import { buildSearchText, canonical } from '@cojiro/shared';
 import { answerWords } from '../../lib/seo.ts';
 import { REPORT_REASON_LABELS } from '../../lib/text.ts';
@@ -36,6 +37,9 @@ for (const q of questions) {
 }
 const twinsOf = (q: { id: number; lang: string; questionText: string }) =>
   (sameText.get(`${q.lang}\u001f${canonical(q.questionText)}`) ?? []).filter((id) => id !== q.id);
+const byId = new Map(questions.map((q) => [q.id, q]));
+const ingest = await getIngest();
+const duplicates = (ingest ? await ingest.listDuplicates() : []).filter((d) => byId.has(d.keepId) && byId.has(d.dropId));
 const msg = Astro.url.searchParams.get('msg');
 const error = Astro.url.searchParams.get('error');
 
@@ -172,6 +176,49 @@ function prefill(parsed: unknown) {
         );
       })}
     </ul>
+
+    {duplicates.length > 0 && (
+      <section id="duplicates">
+        <h2>Duplicates</h2>
+        <p class="muted dup-note">Same wording, same picture, and the same answer or choices. Merging keeps the left one and moves the other's uploads into it.</p>
+        <ul class="dup-list">
+          {duplicates.map((d) => {
+            const keep = byId.get(d.keepId)!;
+            const drop = byId.get(d.dropId)!;
+            return (
+              <li class="dup-row">
+                {[keep, drop].map((q, n) => (
+                  <div class:list={['dup-side', n === 1 && 'is-drop']}>
+                    <span class="qtile-id">#{q.id} · {n === 0 ? 'keep' : 'merge in'} · {q.submissionCount} {q.submissionCount === 1 ? 'upload' : 'uploads'}</span>
+                    {q.pictureUrl && <img class="dup-pic" src={q.pictureUrl} alt="" loading="lazy" />}
+                    <p class="qtile-text" lang={q.lang}>{q.questionText}</p>
+                    <ol class="qtile-choices" lang={q.lang}>
+                      {q.choices.map((c, i) => (
+                        <li class:list={[i === q.answerIndex && 'is-right']}>
+                          {c.imageUrl && <img class="dup-choice" src={c.imageUrl} alt="" loading="lazy" />}
+                          {answerWords(choiceText(c))}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+                <form method="post" action="/api/admin/duplicates-merge">
+                  <input type="hidden" name="id" value={keep.id} />
+                  <input type="hidden" name="keep" value={keep.id} />
+                  <input type="hidden" name="drop" value={drop.id} />
+                  <button class="btn small" type="submit">Merge</button>
+                </form>
+              </li>
+            );
+          })}
+        </ul>
+        <form method="post" action="/api/admin/duplicates-merge" onsubmit={`return confirm('Merge all ${duplicates.length} duplicates?')`}>
+          <input type="hidden" name="id" value="1" />
+          <input type="hidden" name="all" value="1" />
+          <button class="btn small secondary" type="submit">Merge all {duplicates.length}</button>
+        </form>
+      </section>
+    )}
 
     <h2 id="questions">Questions</h2>
     {questions.length === 0 && <p class="muted">No questions yet.</p>}
