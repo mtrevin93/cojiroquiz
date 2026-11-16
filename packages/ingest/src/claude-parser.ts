@@ -49,9 +49,18 @@ These are pictures from The Legend of Zelda: Ocarina of Time. Name what a pictur
 
 - Items: Hookshot (never "clawshot"; the Hookshot and Longshot look alike, so say Hookshot unless the quiz text itself says Longshot), Megaton Hammer, Fairy Bow, Fairy Slingshot, Boomerang, Bomb, Bombchu, Deku Stick, Deku Nut, Lens of Truth, Ocarina of Time, Fairy Ocarina, Hylian Shield, Deku Shield, Mirror Shield, Master Sword, Kokiri Sword, Biggoron's Sword, Iron Boots, Hover Boots, Goron Tunic, Zora Tunic, Piece of Heart, Heart Container, Gold Skulltula token, rupee (with its colour), bottle contents (Fairy, Poe, Fish, Bug, Blue Fire, Milk).
 - Creatures and characters: Epona (the horse), Cucco (never "rooster" or "chicken"), Navi, Link, Zelda, Sheik, Saria, Malon, Talon, Ingo, Darunia, Ruto, Nabooru, Impa, Mido, Dampé, Ganondorf, Kaepora Gaebora, Skull Kid, Goron, Zora, Gerudo, Deku Scrub, Skulltula, Stalfos, Poe, Like Like.
+- Masks, told apart by how they look. Name a mask only when it matches its description here; otherwise describe it ("orange mask with fangs"):
+  - Keaton Mask: bright yellow fox face with tall pointed ears tipped in black.
+  - Skull Mask: white animal skull with horns.
+  - Spooky Mask: pale wooden face with dark, sad, hollow eyes.
+  - Bunny Hood: a hood with two long upright yellow rabbit ears.
+  - Goron Mask: round orange-brown smiling Goron face.
+  - Zora Mask: pale blue Zora head with fins.
+  - Gerudo Mask: tan woman's face with red hair and a forehead jewel.
+  - Mask of Truth: pale grey-white mask dominated by one large red eye, with spikes around it. A mask without that big single eye is NOT the Mask of Truth.
 - Places: Kokiri Forest, Lost Woods, Sacred Forest Meadow, Hyrule Field, Lon Lon Ranch, Hyrule Castle, Castle Town Market, Temple of Time, Kakariko Village, Graveyard, Death Mountain, Goron City, Zora's River, Zora's Domain, Lake Hylia, Lakeside Laboratory, Gerudo Valley, Gerudo's Fortress, Haunted Wasteland, Desert Colossus, and the dungeons (Deku Tree, Dodongo's Cavern, Jabu-Jabu's Belly, Forest/Fire/Water/Shadow/Spirit Temple, Ice Cavern, Bottom of the Well, Ganon's Castle).
 
-When the choices are several pictures of the same kind of thing (four doors, two houses), the label must say what tells this one apart from the others, in a few words: "door with pots", "house with chests", "house with hearts". Do not describe background scenery. If you cannot tell what something is, say plainly what it looks like in two or three words; never guess a proper name.
+When the choices are several pictures of the same kind of thing (four doors, two houses), the label must say what tells this one apart from the others, in a few words: "door with pots", "house with chests", "house with hearts". Do not describe background scenery. If you are not sure what something is, say plainly what it looks like in two to four words ("brown nut with holes", "orange mask with fangs"). A plain description is always acceptable; a wrong proper name is a serious error, because players rely on these names. Do not let the question text or the other choices push you into a name: a question about masks can include choices that are not masks.
 
 # Reveal state
 
