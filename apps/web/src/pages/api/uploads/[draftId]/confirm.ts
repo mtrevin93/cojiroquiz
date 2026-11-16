@@ -11,8 +11,8 @@ export const POST: APIRoute = async (ctx) => {
   const input = await readJson(ctx.request, ConfirmInput);
   if (input instanceof Response) return input;
   try {
-    // Uploaders only choose the answer; the text always comes from the screenshot.
-    return json(await ingest.confirmDraft(draftId, { answerIndex: input.answerIndex }, { ipHash: ipHashOf(ctx) }));
+    // Uploaders choose the answer and may name picture choices (enforced in ingest); all other text comes from the screenshot.
+    return json(await ingest.confirmDraft(draftId, { answerIndex: input.answerIndex, choiceLabels: input.choiceLabels }, { ipHash: ipHashOf(ctx) }));
   } catch (err) {
     const known = ingestErrorResponse(err);
     if (known) return known;

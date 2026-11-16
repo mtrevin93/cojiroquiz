@@ -3069,3 +3069,74 @@ dialog.modal {
 .opts {
   margin-top: 0;
 }
+
+/* upload review: picture choices, each with an editable name */
+.pick-list:has(.pick-pic) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.pick-list:has(.pick-pic) legend,
+.pick-hint {
+  grid-column: 1 / -1;
+}
+.pick-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.pick-pic {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.pick-pic-btn {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 3px solid #050919;
+  border-radius: 8px;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+.pick-pic.is-picked .pick-pic-btn {
+  border-color: var(--gold);
+}
+.pick-pic-btn img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.pick-pic-btn > span:not(.choice-pics-mark) {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  color: var(--text-muted);
+}
+.pick-pic input[type='text'] {
+  min-height: 44px;
+  padding: 6px 10px;
+}
+/* admin: rename picture choices */
+.rename-form {
+  flex-basis: 100%;
+}
+.rename-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.rename-grid label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+.rename-grid img {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border: 2px solid var(--line-strong);
+  border-radius: 8px;
+}

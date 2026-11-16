@@ -541,10 +541,13 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
       const questionText = (v.questionText ?? parsed.questionText).trim();
       if (!questionText) throw new IngestError('invalid_input', 'Question text cannot be empty.');
       const crops: DraftCrops = draft.visual ?? { picture: null, choices: parsed.choices.map(() => null) };
+      // Uploaders may name the pictures; text and symbol choices always come from the screenshot.
+      const named = (c: ParsedQuiz['choices'][number], i: number) =>
+        c.kind === 'image' ? v.choiceLabels?.[i]?.replace(/\s+/g, ' ').trim().slice(0, 60) || null : null;
       const choices: StoredChoice[] = parsed.choices.map((c, i) => ({
-        label: v.choiceLabels?.[i]?.trim() || c.label,
+        label: named(c, i) ?? c.label,
         kind: c.kind,
-        description: c.description,
+        description: named(c, i) ?? c.description,
         imageKey: crops.choices[i]?.key ?? null,
         phash: crops.choices[i]?.phash ?? null,
       }));

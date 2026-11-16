@@ -437,6 +437,8 @@ function Review({
   const dupIndex = draft.duplicateOf ? draft.choices.findIndex((c) => c.label === draft.duplicateOf!.answerLabel) : -1;
   const lang = draft.lang;
   const [answer, setAnswer] = useState<number | null>(draft.detectedAnswerIndex ?? (dupIndex >= 0 ? dupIndex : null));
+  const [names, setNames] = useState(draft.choices.map((c) => c.label || c.description || ''));
+  const hasPictures = draft.choices.some((c) => c.kind === 'image');
   const saving = item.status === 'confirming';
   const lowConfidence = draft.confidence !== 'high';
 
@@ -444,7 +446,8 @@ function Review({
     e.preventDefault();
     if (answer === null) return;
     // The text comes from the screenshot only; uploaders choose the answer, nothing else.
-    onConfirm({ answerIndex: answer });
+    const renamed = names.some((n, i) => draft.choices[i]!.kind === 'image' && n.trim() && n.trim() !== draft.choices[i]!.label);
+    onConfirm(renamed ? { answerIndex: answer, choiceLabels: names.map((n) => n.trim()) } : { answerIndex: answer });
   }
 
   return (
@@ -487,23 +490,38 @@ function Review({
                 ? 'Answer read from the screenshot. Correct?'
                 : 'Tap the correct answer'}
             </legend>
-            {draft.choices.map((c, i) => (
-              <button
-                key={i}
-                type="button"
-                className="pick ornate"
-                aria-pressed={answer === i}
-                onClick={() => setAnswer(i)}
-                lang={lang}
-              >
-                {answer === i && <CheckIcon />}
-                {c.previewUrl && <img src={c.previewUrl} alt="" width={64} height={64} />}
-                <span>
-                  {c.label || c.description || `Choice ${i + 1}`}
-                  {c.kind === 'image' && c.description && c.label ? <span className="choice-desc">{c.description}</span> : null}
-                </span>
-              </button>
-            ))}
+            {draft.choices.map((c, i) =>
+              c.kind === 'image' ? (
+                <div key={i} className={answer === i ? 'pick-pic is-picked' : 'pick-pic'}>
+                  <button type="button" className="pick-pic-btn" aria-pressed={answer === i} onClick={() => setAnswer(i)} aria-label={`Choice ${i + 1}: ${names[i] || 'picture'}`}>
+                    {c.previewUrl ? <img src={c.previewUrl} alt="" /> : <span>Picture {i + 1}</span>}
+                    {answer === i && (
+                      <span className="choice-pics-mark">
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                  <label className="sr-only" htmlFor={`rv-name-${item.id}-${i}`}>
+                    Name of picture {i + 1}
+                  </label>
+                  <input
+                    id={`rv-name-${item.id}-${i}`}
+                    type="text"
+                    lang={lang}
+                    value={names[i]}
+                    maxLength={60}
+                    autoComplete="off"
+                    onChange={(e) => setNames((ns) => ns.map((x, j) => (j === i ? e.target.value : x)))}
+                  />
+                </div>
+              ) : (
+                <button key={i} type="button" className="pick ornate" aria-pressed={answer === i} onClick={() => setAnswer(i)} lang={lang}>
+                  {answer === i && <CheckIcon />}
+                  <span>{c.label || `Choice ${i + 1}`}</span>
+                </button>
+              ),
+            )}
+            {hasPictures && <p className="pick-hint">The names under the pictures were guessed. Fix any that are wrong.</p>}
           </fieldset>
         </div>
       </div>

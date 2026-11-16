@@ -175,3 +175,33 @@ export function setAnswerByAdmin(
 export function resolveReportsForQuestion(db: Db, questionId: number): void {
   db.update(reports).set({ resolved: true }).where(and(eq(reports.questionId, questionId), eq(reports.resolved, false))).run();
 }
+
+/** Admin: set the names of a question's picture choices. Votes follow the rename. */
+export function renameChoices(db: Db, id: number, names: string[]): { ok: true } | { ok: false; error: string } {
+  const voteText = (c: StoredChoice) => (c.kind === 'image' ? c.description || c.label : c.label);
+  const canon = (t: string) => {
+    const base = t.normalize('NFKC').toLowerCase().replace(/[\u2018\u2019\u201B\u2032]/g, "'").replace(/[\u201C\u201D\u201F\u2033]/g, '"').replace(/\s+/gu, ' ').trim();
+    const stripped = base.replace(/[^\p{L}\p{N}\p{M}\s]/gu, ' ').replace(/\s+/gu, ' ').trim();
+    return stripped === '' ? base : stripped;
+  };
+  return db.transaction((tx) => {
+    const q = tx.select().from(questions).where(eq(questions.id, id)).get();
+    if (!q) return { ok: false as const, error: 'Question not found.' };
+    const choices = q.choices.map((c, i) => {
+      const name = c.kind === 'image' ? names[i]?.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+      return name ? { ...c, label: name, description: name } : c;
+    });
+    for (const [i, c] of q.choices.entries()) {
+      const from = canon(voteText(c));
+      const to = canon(voteText(choices[i]!));
+      if (from !== to) {
+        tx.update(schema.submissions).set({ answerCanonical: to }).where(and(eq(schema.submissions.questionId, id), eq(schema.submissions.answerCanonical, from))).run();
+      }
+    }
+    tx.update(questions)
+      .set({ choices, searchText: buildSearchText([q.questionText, q.level, ...choices.map((c) => c.label), ...choices.map((c) => c.description), q.pictureDescription]), updatedAt: Date.now() })
+      .where(eq(questions.id, id))
+      .run();
+    return { ok: true as const };
+  });
+}

@@ -6,6 +6,7 @@ import {
   deleteQuarantine,
   deleteQuestion,
   editQuestion,
+  renameChoices,
   resolveReport,
   resolveReportsForQuestion,
   setAnswerByAdmin,
@@ -55,6 +56,10 @@ export const POST: APIRoute = async (ctx) => {
     case 'review-set-answer': {
       const res = setAnswerByAdmin(db, id, Number(str('answerIndex')), { unhide: str('unhide') === '1' });
       return res.ok ? review(`Answer set to ${res.label}. Reports closed.`) : review(res.error, true);
+    }
+    case 'question-rename-choices': {
+      const res = renameChoices(db, id, form.getAll('name').map((v) => String(v)));
+      return res.ok ? review('Picture names saved.') : review(res.error, true);
     }
     case 'question-relabel': {
       const ingest = await getIngest();

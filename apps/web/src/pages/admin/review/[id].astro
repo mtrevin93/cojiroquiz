@@ -85,6 +85,21 @@ const labelFor = (canon: string) => {
           <button class="btn small secondary" type="submit">Close reports, keep answer</button>
         </form>
       )}
+      {q.choices.some((c) => c.kind === 'image') && (
+        <form class="rename-form" method="post" action="/api/admin/question-rename-choices">
+          <input type="hidden" name="id" value={q.id} />
+          <h2>Picture names</h2>
+          <div class="rename-grid">
+            {q.choices.map((c, i) => (
+              <label>
+                {c.imageUrl ? <img src={c.imageUrl} alt="" loading="lazy" /> : <span class="muted">Choice {i + 1}</span>}
+                <input type="text" name="name" value={c.kind === 'image' ? choiceText(c) : ''} maxlength="60" disabled={c.kind !== 'image'} aria-label={`Name of picture ${i + 1}`} lang={q.lang} />
+              </label>
+            ))}
+          </div>
+          <button class="btn small" type="submit">Save names</button>
+        </form>
+      )}
       {(q.pictureUrl || q.choices.some((c) => c.kind === 'image')) && (
         <form method="post" action="/api/admin/question-relabel">
           <input type="hidden" name="id" value={q.id} />

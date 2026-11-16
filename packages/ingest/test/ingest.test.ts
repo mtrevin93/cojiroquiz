@@ -626,3 +626,25 @@ describe('parse cap', () => {
     }
   });
 });
+
+describe('uploader names for picture choices', () => {
+  it('applies names to pictures only, never to text choices', async () => {
+    const a = await png(400, 800);
+    parser.set(
+      a,
+      quiz({
+        questionText: 'Which one can be sold for 50 rupees?',
+        choices: [
+          { label: 'Deku Nut', kind: 'image', description: 'Deku Nut', box: { x: 0, y: 0, w: 1, h: 0.4 } },
+          { label: 'Keaton Mask', kind: 'text', description: null, box: null },
+        ],
+      }),
+    );
+    const d = draftOf(await ingest.processUpload({ bytes: a, ...png_ }, ip(1)));
+    const r = await ingest.confirmDraft(d.draftId, { answerIndex: 0, choiceLabels: ['  Skull   Mask ', 'HACKED'] }, ip(1));
+    const q = question(r.questionId);
+    expect(q.choices.map((c) => c.label)).toEqual(['Skull Mask', 'Keaton Mask']);
+    expect(q.choices[0]!.description).toBe('Skull Mask');
+    expect(q.searchText).toContain('skull mask');
+  });
+});
