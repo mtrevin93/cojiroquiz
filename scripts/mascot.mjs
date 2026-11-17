@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 // Builds the site's mascot images from apps/web/art/cojiro-cutout.png, which is
 // apps/web/art/cojiro-source.png with its background removed (rembg, birefnet-general).
 //   node scripts/mascot.mjs
@@ -18,7 +19,22 @@ const tile = async (size, pad) =>
     .composite([{ input: await sharp(head).resize(size - 2 * pad, size - 2 * pad).toBuffer(), left: pad, top: pad }])
     .png();
 await (await tile(96, 2)).toFile(pub + 'mark.png');
-await (await tile(64, 1)).toFile(pub + 'favicon.png');
+// Google only shows a favicon in search results when its size is a multiple of 48px.
+await (await tile(96, 2)).toFile(pub + 'favicon.png');
+// /favicon.ico for crawlers and browsers that ask for it without reading the page: a 48px PNG in an ICO wrapper.
+{
+  const png = await (await tile(48, 1)).png().toBuffer();
+  const head = Buffer.alloc(22);
+  head.writeUInt16LE(1, 2); // type: icon
+  head.writeUInt16LE(1, 4); // one image
+  head[6] = 48; // width
+  head[7] = 48; // height
+  head.writeUInt16LE(1, 10); // colour planes
+  head.writeUInt16LE(32, 12); // bits per pixel
+  head.writeUInt32LE(png.length, 14);
+  head.writeUInt32LE(22, 18); // offset of the image data
+  writeFileSync(pub + 'favicon.ico', Buffer.concat([head, png]));
+}
 await (await tile(180, 6)).toFile(pub + 'icon-180.png');
 await (await tile(192, 6)).toFile(pub + 'icon-192.png');
 await (await tile(512, 16)).toFile(pub + 'icon-512.png');
