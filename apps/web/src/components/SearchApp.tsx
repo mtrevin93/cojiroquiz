@@ -1,4 +1,4 @@
-import { matchesQuery } from '@cojiro/shared/normalize';
+import { buildSearchText, matchesQuery } from '@cojiro/shared/normalize';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { langName } from '../lib/text.ts';
 import { CloseIcon, SearchIcon } from './icons.tsx';
@@ -60,10 +60,14 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
     };
   }, []);
 
-  const matches = useMemo(
-    () => entries.filter((e) => matchesQuery(e.searchText, deferredQuery)),
-    [entries, deferredQuery],
-  );
+  // Searchable text of the question alone, to rank "the question says this" above "a choice says this".
+  const questionOnly = useMemo(() => new Map(entries.map((e) => [e.id, buildSearchText([e.questionText])])), [entries]);
+  const matches = useMemo(() => {
+    const found = entries.filter((e) => matchesQuery(e.searchText, deferredQuery));
+    if (!deferredQuery.trim()) return found;
+    const inQuestion = (e: CardEntry) => matchesQuery(questionOnly.get(e.id) ?? '', deferredQuery);
+    return [...found.filter(inQuestion), ...found.filter((e) => !inQuestion(e))];
+  }, [entries, questionOnly, deferredQuery]);
   const results = useMemo(() => (lang ? matches.filter((e) => e.lang === lang) : matches), [matches, lang]);
   const otherLangCount = matches.length - results.length;
   const shown = results.slice(0, limit);

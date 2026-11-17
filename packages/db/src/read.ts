@@ -1,7 +1,7 @@
 // Read-side queries used by pages (owned by the web track).
 import { and, count, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { matchesQuery } from '@cojiro/shared';
+import { buildSearchText, matchesQuery } from '@cojiro/shared';
 import type { QuestionDTO, ReportReason, SearchIndexEntry, StoredChoice } from '@cojiro/shared';
 import type { Db } from './client.ts';
 import { feedback, images, quarantine, questions, reports, submissions } from './schema.ts';
@@ -166,7 +166,14 @@ function toSearchEntry(row: Row, urlFor: UrlFor): SearchEntry {
       ? v.choices.map((c, i) => ({ url: c.imageUrl!, label: choiceText(c), correct: i === v.answerIndex }))
       : [],
     options: v.choices.map((c, i) => ({ label: choiceText(c), correct: i === v.answerIndex })),
-    searchText: row.q.searchText,
+    // Built here, not read from the stored column, so what is searchable is decided in one place:
+    // the question, its choices and picture names. The level label is not part of it.
+    searchText: buildSearchText([
+      v.questionText,
+      ...v.choices.map((c) => c.label),
+      ...v.choices.map((c) => c.description),
+      v.pictureDescription,
+    ]),
     answerLabel: choiceText(answer),
     answerImageUrl: v.answerImage?.url ?? null,
     answerChoiceImageUrl: answer?.imageUrl ?? null,

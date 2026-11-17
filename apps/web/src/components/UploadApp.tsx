@@ -314,11 +314,13 @@ function ScreenshotTab({ takeToken, active }: { takeToken: () => Promise<string 
             e.target.value = '';
           }}
         />
+        <svg className="dropzone-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />
+        </svg>
         <label htmlFor="shot-files" className="btn" style={{ marginBottom: 0 }}>
           {items.length ? 'Add more screenshots' : 'Choose screenshots'}
         </label>
-        <p className="muted">Pick one or several.</p>
-        <p className="muted desktop-only">Or drag and drop, or paste.</p>
+        <p className="muted desktop-only">or drop them here, or paste</p>
       </div>
 
       {paused && (

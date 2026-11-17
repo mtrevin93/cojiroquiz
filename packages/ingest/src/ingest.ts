@@ -381,7 +381,7 @@ function insertOrMerge(tx: Tx, c: Candidate, now: number): ConfirmResult {
         choices: c.choices,
         answerIndex: c.answerIndex,
         questionImageId: c.imageId ?? q.questionImageId,
-        searchText: buildSearchText([q.questionText, q.level, ...c.choices.map((x) => x.label), ...c.choices.map((x) => x.description), q.pictureDescription]),
+        searchText: buildSearchText([q.questionText, ...c.choices.map((x) => x.label), ...c.choices.map((x) => x.description), q.pictureDescription]),
         textKey,
         dedupeKey: keyFor(),
       });
@@ -399,7 +399,6 @@ function insertOrMerge(tx: Tx, c: Candidate, now: number): ConfirmResult {
       questionText: c.questionText,
       searchText: buildSearchText([
         c.questionText,
-        c.level,
         ...c.choices.map((x) => x.label),
         ...c.choices.map((x) => x.description),
         c.pictureDescription,
@@ -730,7 +729,7 @@ export function createIngest({ db, store, parser, config = {} }: IngestDeps): In
         updateQuestion(tx, q.id, {
           choices,
           pictureDescription,
-          searchText: buildSearchText([q.questionText, q.level, ...choices.map((x) => x.label), ...choices.map((x) => x.description), pictureDescription]),
+          searchText: buildSearchText([q.questionText, ...choices.map((x) => x.label), ...choices.map((x) => x.description), pictureDescription]),
           updatedAt: now(),
         });
       });

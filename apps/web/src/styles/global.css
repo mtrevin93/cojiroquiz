@@ -3682,3 +3682,40 @@ dialog.modal {
     display: none;
   }
 }
+
+/* upload: a quiet drop area in the site's own colours (replaces the wooden sign) */
+.dropzone {
+  gap: 14px;
+  margin-top: 20px;
+  padding: 44px 16px;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: rgb(15 24 72 / 0.6);
+  box-shadow: none;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.dropzone.is-over {
+  border-color: var(--gold);
+  background: var(--surface-2);
+}
+.dropzone-icon {
+  color: var(--line-strong);
+}
+.dropzone.is-over .dropzone-icon {
+  color: var(--gold);
+}
+.dropzone p,
+.dropzone .muted {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-shadow: none;
+}
+.dropzone.is-compact {
+  padding: 12px;
+}
+.dropzone.is-compact .dropzone-icon {
+  display: none;
+}

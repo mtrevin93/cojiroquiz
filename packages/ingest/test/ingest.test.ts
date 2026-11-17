@@ -189,7 +189,7 @@ describe('confirm: insert or merge', () => {
       { label: '✓', kind: 'symbol', description: null, imageKey: null, phash: null },
     ]);
     expect(q.searchText).toContain('rayray');
-    expect(q.searchText).toContain('egg level');
+    expect(q.searchText).not.toContain('egg level'); // the level label is not searchable
     const subs = db.select().from(schema.submissions).all();
     expect(subs).toHaveLength(1);
     expect(subs[0]).toMatchObject({ answerCanonical: '✓', answerSource: 'manual', ipHash: 'ip-1' });

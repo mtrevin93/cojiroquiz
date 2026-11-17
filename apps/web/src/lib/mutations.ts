@@ -19,7 +19,7 @@ export function choiceIdentity(c: StoredChoice): string {
 }
 
 export function searchTextFor(q: { questionText: string; level: string | null; choices: StoredChoice[] }): string {
-  return buildSearchText([q.questionText, q.level, ...q.choices.map((c) => c.label), ...q.choices.map((c) => c.description)]);
+  return buildSearchText([q.questionText, ...q.choices.map((c) => c.label), ...q.choices.map((c) => c.description)]);
 }
 
 export function dedupeKeyFor(q: { lang: string; questionText: string; choices: StoredChoice[] }): string {
@@ -199,7 +199,7 @@ export function renameChoices(db: Db, id: number, names: string[]): { ok: true }
       }
     }
     tx.update(questions)
-      .set({ choices, searchText: buildSearchText([q.questionText, q.level, ...choices.map((c) => c.label), ...choices.map((c) => c.description), q.pictureDescription]), updatedAt: Date.now() })
+      .set({ choices, searchText: buildSearchText([q.questionText, ...choices.map((c) => c.label), ...choices.map((c) => c.description), q.pictureDescription]), updatedAt: Date.now() })
       .where(eq(questions.id, id))
       .run();
     return { ok: true as const };
