@@ -3192,3 +3192,493 @@ dialog.modal {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- practice mode ---------- */
+
+.practice {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 0 8px;
+}
+.practice-start,
+.practice-summary {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding-top: 36px;
+  text-align: center;
+  animation: practice-in 0.3s var(--ease) both;
+}
+.practice-start h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.practice-rules {
+  margin: 0;
+  color: var(--text-muted);
+}
+.practice-go {
+  min-width: 200px;
+  min-height: 56px;
+  margin-top: 8px;
+  font-size: 1.2rem;
+}
+
+/* progress dots + clock */
+.practice-hud {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.practice-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.practice-dots li {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #050919;
+  border-radius: 50%;
+  background: #24317a;
+  transition:
+    background-color 0.25s,
+    transform 0.25s var(--ease);
+}
+.practice-dots li.is-now {
+  background: var(--gold);
+  transform: scale(1.25);
+}
+.practice-dots li.is-right {
+  background: var(--b-green);
+}
+.practice-dots li.is-wrong {
+  background: var(--wrong);
+}
+.practice-timer {
+  height: 12px;
+  border: 2px solid #050919;
+  border-radius: 8px;
+  background: #0b1238;
+  overflow: hidden;
+}
+.practice-timer span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--gold);
+  transform-origin: left center;
+}
+.practice-timer span.is-running {
+  animation-name: practice-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.practice-timer.is-stopped span {
+  animation-play-state: paused;
+}
+@keyframes practice-drain {
+  0% {
+    transform: scaleX(1);
+    background: var(--gold);
+  }
+  66% {
+    background: var(--gold);
+  }
+  80% {
+    background: var(--start-red);
+  }
+  100% {
+    transform: scaleX(0);
+    background: var(--start-red);
+  }
+}
+
+/* question */
+.practice-stage {
+  display: grid;
+  gap: 14px;
+}
+.practice-q {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--bevel), var(--drop);
+  animation: practice-in 0.28s var(--ease) both;
+}
+.practice-q-pic {
+  display: block;
+  width: 100%;
+  max-height: 38vh;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #000;
+}
+.practice-q-text {
+  margin: 0;
+  font-size: clamp(1.15rem, 4.4vw, 1.4rem);
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.6);
+}
+.practice-q-text .notes {
+  justify-content: center;
+}
+
+/* choices */
+.practice-choices {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.practice-choices.is-pictures {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.practice-choices li {
+  min-width: 0;
+  animation: practice-in 0.28s var(--ease) both;
+}
+.practice-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 46px;
+  border: 3px solid #2b3a8c;
+  border-radius: 10px;
+  background: #121c52;
+  box-shadow: 0 3px 0 #050919;
+  color: #fff;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    border-color 0.18s,
+    background-color 0.18s,
+    opacity 0.25s,
+    transform 0.12s var(--ease);
+}
+.practice-choice-text {
+  overflow-wrap: anywhere;
+  text-shadow: 1px 1px 0 rgb(0 0 0 / 0.5);
+}
+@media (hover: hover) {
+  .practice-choice:enabled:hover {
+    border-color: #fff;
+    background: #1a2768;
+  }
+}
+.practice-choice:enabled:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #050919;
+}
+.practice-choice:disabled {
+  cursor: default;
+}
+.practice-choices.is-pictures .practice-choice {
+  flex-direction: column;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+}
+.practice-choices.is-pictures img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.practice-choice-name {
+  width: 100%;
+  padding: 6px 8px;
+  background: #0b1238;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+  animation: practice-in 0.2s var(--ease) both;
+}
+
+/* after the answer: same colours as the game */
+.practice-choice.is-right {
+  border-color: var(--gold);
+  background-color: #3a2f08;
+  animation: practice-pop 0.38s var(--ease);
+}
+.practice-choice.is-wrong {
+  border-color: var(--wrong);
+  background-color: #4a1a22;
+  animation: practice-shake 0.34s ease-in-out;
+}
+.practice-choice.is-dim {
+  opacity: 0.45;
+}
+.practice-choice.is-picked {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+.practice-choices.is-pictures .practice-choice.is-right,
+.practice-choices.is-pictures .practice-choice.is-wrong {
+  background-color: #000;
+}
+.practice-mark {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-top: -15px;
+  border: 2px solid #6b4e00;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff0a0, #ffd23f 45%, #e8a900);
+  color: #3a2a00;
+  animation: practice-stamp 0.26s var(--ease) both;
+}
+.practice-mark.is-wrong {
+  border-color: #5c1210;
+  background: var(--start-red);
+  color: #fff;
+}
+.practice-mark .answer-check {
+  width: 17px;
+  height: 17px;
+  color: inherit;
+}
+.practice-choices.is-pictures .practice-mark {
+  top: 8px;
+  right: 8px;
+  margin-top: 0;
+}
+
+/* status + next. The height is reserved so nothing jumps when the answer shows. */
+.practice-foot {
+  display: grid;
+  gap: 12px;
+  min-height: 108px;
+  align-content: start;
+}
+.practice-status {
+  min-height: 1.6em;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 rgb(0 0 0 / 0.6);
+}
+.practice-status.is-right {
+  color: var(--gold);
+  animation: practice-in 0.2s var(--ease) both;
+}
+.practice-status.is-wrong {
+  color: var(--wrong);
+  animation: practice-in 0.2s var(--ease) both;
+}
+.practice-foot-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: practice-in 0.2s var(--ease) both;
+}
+.practice-foot-actions > .btn:last-child {
+  min-width: 140px;
+  min-height: 52px;
+  font-size: 1.1rem;
+}
+
+/* round summary */
+.practice-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 4.5rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 4px 4px 0 rgb(0 0 0 / 0.6);
+  animation: practice-pop 0.45s var(--ease);
+}
+.practice-score-of {
+  font-size: 1.8rem;
+  color: var(--text-muted);
+}
+.practice-missed-title {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-shadow: none;
+}
+.practice-missed {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.practice-missed li {
+  animation: practice-in 0.28s var(--ease) both;
+}
+.practice-missed a {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+.practice-missed a:hover {
+  border-color: var(--gold);
+}
+.practice-missed-pic {
+  width: 100%;
+  max-height: 140px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #000;
+}
+.practice-missed-q {
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.practice-missed-a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8dffa6;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.practice-missed-a img {
+  width: 72px;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border: 2px solid var(--gold);
+  border-radius: 6px;
+}
+.practice-missed-a .opts-mark {
+  width: 24px;
+  height: 24px;
+}
+.practice-missed-a .opts-mark .answer-check {
+  width: 13px;
+  height: 13px;
+}
+.practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.practice-actions .btn {
+  min-width: 160px;
+  min-height: 52px;
+}
+.practice-seen {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+@keyframes practice-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes practice-pop {
+  50% {
+    transform: scale(1.04);
+  }
+}
+@keyframes practice-shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes practice-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+/* Reduced motion: keep the clock (it is information), drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .practice-start,
+  .practice-summary,
+  .practice-q,
+  .practice-choices li,
+  .practice-choice,
+  .practice-choice-name,
+  .practice-status,
+  .practice-foot-actions,
+  .practice-mark,
+  .practice-score,
+  .practice-missed li {
+    animation: none !important;
+  }
+}
+
+/* header on phones: two buttons have to fit next to the wordmark */
+@media (max-width: 480px) {
+  .site-header .wrap {
+    gap: 8px;
+  }
+  .wordmark {
+    gap: 8px;
+    font-size: 1.02rem;
+    letter-spacing: 0.03em;
+  }
+  .wordmark .mark {
+    width: 36px;
+    height: 36px;
+  }
+  .site-nav .btn {
+    margin-left: 4px;
+    padding-inline: 10px;
+  }
+  .site-nav .btn svg {
+    display: none;
+  }
+}

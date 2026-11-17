@@ -11,6 +11,7 @@ export const GET: APIRoute = () => {
   const site = getEnv().siteUrl;
   const urls: Array<{ loc: string; lastmod?: number }> = [
     { loc: '/' },
+    { loc: '/practice' },
     { loc: '/about' },
     ...listSitemapEntries(db).map((q) => ({ loc: questionPath(q.slug), lastmod: q.updatedAt })),
   ];

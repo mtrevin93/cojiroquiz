@@ -196,7 +196,7 @@ function prefill(parsed: unknown) {
                       {q.choices.map((c, i) => (
                         <li class:list={[i === q.answerIndex && 'is-right']}>
                           {c.imageUrl && <img class="dup-choice" src={c.imageUrl} alt="" loading="lazy" />}
-                          {answerWords(choiceText(c))}
+                          {answerWords(choiceText(c), q.choices.map((x) => choiceText(x)))}
                         </li>
                       ))}
                     </ol>
@@ -283,7 +283,7 @@ function prefill(parsed: unknown) {
             ) : (
               <ol class="qtile-choices" lang={q.lang}>
                 {q.choices.map((c, i) => (
-                  <li class:list={[i === q.answerIndex && 'is-right']}>{answerWords(choiceText(c))}</li>
+                  <li class:list={[i === q.answerIndex && 'is-right']}>{answerWords(choiceText(c), q.choices.map((x) => choiceText(x)))}</li>
                 ))}
               </ol>
             )}

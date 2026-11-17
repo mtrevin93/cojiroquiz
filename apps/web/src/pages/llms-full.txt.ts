@@ -16,7 +16,7 @@ export const GET: APIRoute = async () => {
       `## ${q.questionText.replace(/\s*\n\s*/g, ' / ')}`,
       ...(q.pictureUrl ? [`Picture: ${q.pictureDescription ?? 'shown with the question'} (${q.pictureUrl})`] : []),
       `Choices: ${q.choices.map((c) => choiceText(c)).join(' | ')}`,
-      `Answer: ${answerWords(answer)}${q.disputed ? ' (disputed)' : ''}`,
+      `Answer: ${answerWords(answer, q.choices.map((c) => choiceText(c)))}${q.disputed ? ' (disputed)' : ''}`,
       `Language: ${q.lang}`,
       `URL: ${site}${questionPath(q.slug)}`,
     ].join('\n');

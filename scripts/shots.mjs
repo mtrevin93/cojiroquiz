@@ -55,6 +55,32 @@ for (const [sizeName, size] of Object.entries(sizes)) {
       await page.getByRole('button', { name: 'Report a problem' }).click();
       await page.locator('dialog[open]').waitFor({ timeout: 5000 });
     },
+    'practice-start': async () => { await page.goto(base + '/practice', { waitUntil: 'networkidle' }); },
+    'practice-question': async () => {
+      await page.goto(base + '/practice', { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Start' }).click();
+      await page.locator('.practice-choice:enabled').first().waitFor({ timeout: 5000 });
+      await page.waitForTimeout(600);
+    },
+    // Answers a whole round wrong on purpose (first wrong choice each time). Practice stores nothing on the server.
+    'practice-reveal': async () => {
+      await page.goto(base + '/practice', { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Start' }).click();
+      await page.locator('.practice-choice:enabled').first().click();
+      await page.locator('.practice-status:not(:empty)').waitFor({ timeout: 5000 });
+      await page.waitForTimeout(500);
+    },
+    'practice-summary': async () => {
+      await page.goto(base + '/practice', { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Start' }).click();
+      for (let i = 0; i < 12; i++) {
+        if (await page.locator('.practice-score').count()) break;
+        await page.locator('.practice-choice:enabled').first().click({ timeout: 3000 }).catch(() => {});
+        await page.waitForTimeout(400);
+        await page.getByRole('button', { name: /^(Next|Finish)$/ }).click({ timeout: 1500 }).catch(() => {});
+      }
+      await page.locator('.practice-score').waitFor({ timeout: 5000 });
+    },
     'admin-search': async () => {
       if (!process.env.ADMIN_TOKEN) return false;
       await page.goto(base + '/admin', { waitUntil: 'networkidle' });

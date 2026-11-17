@@ -1,5 +1,5 @@
 import type { SearchIndexEntry } from '@cojiro/shared';
-import { langName, oneLine, slugify } from '../lib/text.ts';
+import { langName, oneLine, slugify, trueFalse } from '../lib/text.ts';
 import { CheckIcon, CrossIcon } from './icons.tsx';
 
 export type CardEntry = SearchIndexEntry & {
@@ -46,24 +46,30 @@ export function QuestionText({ text }: { text: string }) {
 }
 
 /** ✓ / X answers to a statement read better with a word next to the symbol. */
-function answerDisplay(label: string): { icon: 'check' | 'cross'; text: string; symbol: string | null } {
-  const t = label.trim();
-  if (/^[✓✔☑]$/u.test(t)) return { icon: 'check', text: 'True', symbol: '✓' };
-  if (/^[xX✗✕✖×]$/u.test(t)) return { icon: 'cross', text: 'False', symbol: 'X' };
+export function answerDisplay(
+  label: string,
+  allLabels: readonly string[],
+): { icon: 'check' | 'cross'; text: string; symbol: string | null } {
+  const tf = trueFalse(label, allLabels);
+  if (tf === 'true') return { icon: 'check', text: 'True', symbol: '✓' };
+  if (tf === 'false') return { icon: 'cross', text: 'False', symbol: 'X' };
   return { icon: 'check', text: label, symbol: null };
 }
 
 /** The answer block. Used on cards and question pages. */
 export function AnswerBox({
   label,
+  allLabels,
   choiceImageUrl,
   lang,
 }: {
   label: string;
+  /** Every choice of the question, to tell a True / False pair from a plain "X". */
+  allLabels: readonly string[];
   choiceImageUrl: string | null;
   lang: string;
 }) {
-  const d = answerDisplay(label);
+  const d = answerDisplay(label, allLabels);
   return (
     <div className="answer">
       <span className="answer-badge">{d.icon === 'cross' ? <CrossIcon /> : <CheckIcon />}</span>
@@ -126,12 +132,12 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
       )}
       {entry.choicePictures.length > 0 ? (
         <div className="qcard-answer">
-          <AnswerBox label={entry.answerLabel} choiceImageUrl={null} lang={entry.lang} />
+          <AnswerBox label={entry.answerLabel} allLabels={entry.options.map((o) => o.label)} choiceImageUrl={null} lang={entry.lang} />
         </div>
       ) : (
         <ul className="opts" lang={entry.lang} aria-label="Choices">
           {entry.options.map((o, i) => {
-            const d = answerDisplay(o.label);
+            const d = answerDisplay(o.label, entry.options.map((x) => x.label));
             return (
               <li key={i} className={o.correct ? 'is-right' : undefined}>
                 {o.correct && (

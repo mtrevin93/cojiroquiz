@@ -218,6 +218,26 @@ export function buildSearchIndex(db: Db, urlFor: UrlFor, filter: Omit<QuestionFi
   return rows.map((r) => toSearchEntry(r, urlFor));
 }
 
+/**
+ * Questions whose choice pictures were cropped from a result screenshot. Those crops
+ * carry the game's own check mark and X, so they give the answer away before it is picked.
+ * (Crop keys are `choices/<sha256 of the screenshot>-<n>.webp`.)
+ */
+export function questionsWithMarkedChoicePictures(db: Db): Set<number> {
+  const resultShots = new Set(
+    db.select({ sha: images.sha256 }).from(images).where(eq(images.hasReveal, true)).all().map((r) => r.sha),
+  );
+  const marked = new Set<number>();
+  for (const q of db.select({ id: questions.id, choices: questions.choices }).from(questions).all()) {
+    const fromResultShot = q.choices.some((c) => {
+      const sha = c.imageKey && /^choices\/([0-9a-f]{64})-/.exec(c.imageKey)?.[1];
+      return !!sha && resultShots.has(sha);
+    });
+    if (fromResultShot) marked.add(q.id);
+  }
+  return marked;
+}
+
 /** Filter index entries with the shared matcher (same code runs in the browser). */
 export function filterEntries<T extends SearchIndexEntry>(entries: T[], query: string, lang?: string | null): T[] {
   return entries.filter((e) => (!lang || e.lang === lang) && matchesQuery(e.searchText, query));

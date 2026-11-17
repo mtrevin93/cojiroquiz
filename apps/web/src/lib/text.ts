@@ -31,6 +31,20 @@ export function questionSlug(id: number, questionText: string, maxLength = 60): 
   return ascii ? `${id}-${ascii}` : String(id);
 }
 
+const CHECK = /^[✓✔☑]$/u;
+const CROSS = /^[xX✗✕✖×]$/u;
+
+/**
+ * Statement questions have exactly two choices, a check mark and an X, which read as
+ * True and False. Anywhere else a lone "X" is just the letter (e.g. the X Button).
+ */
+export function trueFalse(label: string, allLabels: readonly string[]): 'true' | 'false' | null {
+  const all = allLabels.map((l) => l.trim());
+  if (all.length !== 2 || !all.some((l) => CHECK.test(l)) || !all.some((l) => CROSS.test(l))) return null;
+  const t = label.trim();
+  return CHECK.test(t) ? 'true' : CROSS.test(t) ? 'false' : null;
+}
+
 /** One-line version of a question, for titles and descriptions. */
 export function oneLine(text: string, max = 110): string {
   const s = text.replace(/\s+/g, ' ').trim();

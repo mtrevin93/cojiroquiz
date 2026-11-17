@@ -27,6 +27,7 @@ ${count} ${count === 1 ? 'question' : 'questions'} so far.
 
 ## Other
 
+- [Practice](${site}/practice): timed rounds of quiz questions, with missed ones repeated
 - [Sitemap](${site}/sitemap.xml)
 - [About](${site}/about)
 `;

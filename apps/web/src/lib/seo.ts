@@ -1,5 +1,5 @@
 import type { QuestionDTO } from '@cojiro/shared';
-import { oneLine } from './text.ts';
+import { oneLine, trueFalse } from './text.ts';
 
 export const SITE_NAME = 'Cojiro Quiz';
 export const SITE_TAGLINE = 'Ocarina of Time Quiz answers for Zelda Notes';
@@ -9,11 +9,9 @@ export const SITE_DESCRIPTION =
   'Answers to the Ocarina of Time Quiz in Zelda Notes: Egg Level, Cucco Level and Cojiro Challenge. Search any word from the question to get the answer.';
 
 /** "✓" and "X" read as True / False in titles and descriptions. */
-export function answerWords(label: string): string {
-  const t = label.trim();
-  if (/^[✓✔☑]$/u.test(t)) return 'True (✓)';
-  if (/^[xX✗✕✖×]$/u.test(t)) return 'False (X)';
-  return label;
+export function answerWords(label: string, allLabels: readonly string[]): string {
+  const tf = trueFalse(label, allLabels);
+  return tf === 'true' ? 'True (✓)' : tf === 'false' ? 'False (X)' : label;
 }
 
 export function websiteJsonLd(siteUrl: string) {

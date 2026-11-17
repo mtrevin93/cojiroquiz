@@ -24,9 +24,10 @@ const answer = q.choices[q.answerIndex];
 const answerText = choiceText(answer);
 const pictureChoices = q.choices.length > 0 && q.choices.every((c) => c.imageUrl);
 const wrong = q.choices.filter((_, i) => i !== q.answerIndex);
+const allLabels = q.choices.map((c) => choiceText(c));
 const short = oneLine(q.questionText, 70);
-const title = `${short} Answer: ${oneLine(answerWords(answerText), 30)}`;
-const description = `Answer: ${answerWords(answerText)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
+const title = `${short} Answer: ${oneLine(answerWords(answerText, allLabels), 30)}`;
+const description = `Answer: ${answerWords(answerText, allLabels)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
 const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? null;
 ---
 
@@ -74,7 +75,7 @@ const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? nu
             ))}
           </ul>
         )}
-        <AnswerBox label={answerText} choiceImageUrl={null} lang={q.lang} />
+        <AnswerBox label={answerText} allLabels={allLabels} choiceImageUrl={null} lang={q.lang} />
         {q.disputed && (
           <div class="qcard-meta">
             <span class="tag disputed">Disputed</span>
@@ -85,7 +86,7 @@ const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? nu
           <div class="other-choices">
             <h2 class="section-label">Other choices</h2>
             <ul lang={q.lang}>
-              {wrong.map((c) => <li>{answerWords(choiceText(c))}</li>)}
+              {wrong.map((c) => <li>{answerWords(choiceText(c), allLabels)}</li>)}
             </ul>
           </div>
         )}
