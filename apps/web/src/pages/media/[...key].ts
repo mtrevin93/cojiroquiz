@@ -11,7 +11,12 @@ export const GET: APIRoute = async ({ params }) => {
   } catch {
     blob = null;
   }
-  if (!blob) return new Response('Not found', { status: 404 });
+  if (!blob) {
+    // Dev with a copy of the live data: pictures that are not on this disk come from the live bucket.
+    const fallback = process.env.MEDIA_FALLBACK_URL?.replace(/\/+$/, '');
+    if (fallback) return Response.redirect(`${fallback}/${key.split('/').map(encodeURIComponent).join('/')}`, 302);
+    return new Response('Not found', { status: 404 });
+  }
   return new Response(blob.body as BodyInit, {
     headers: {
       'Content-Type': blob.contentType.startsWith('image/') ? blob.contentType : 'application/octet-stream',

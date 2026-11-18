@@ -69,6 +69,8 @@ export function AnswerBox({
   choiceImageUrl: string | null;
   lang: string;
 }) {
+  // A picture answer without a name: the check mark on the picture is the answer.
+  if (!label.trim()) return null;
   const d = answerDisplay(label, allLabels);
   return (
     <div className="answer">
@@ -131,9 +133,11 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
         </ul>
       )}
       {entry.choicePictures.length > 0 ? (
+        entry.answerLabel.trim() !== '' && (
         <div className="qcard-answer">
           <AnswerBox label={entry.answerLabel} allLabels={entry.options.map((o) => o.label)} choiceImageUrl={null} lang={entry.lang} />
         </div>
+        )
       ) : (
         <ul className="opts" lang={entry.lang} aria-label="Choices">
           {entry.options.map((o, i) => {

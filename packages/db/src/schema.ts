@@ -48,6 +48,8 @@ export const questions = sqliteTable(
     /** Set when the admin has chosen the answer by hand; later uploads no longer change it. */
     answerLocked: integer('answer_locked', { mode: 'boolean' }).notNull().default(false),
     hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    /** Ids of this question in the game's own question list, when it was imported from there. */
+    sourceIds: text('source_ids', { mode: 'json' }).$type<string[] | null>(),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),
   },

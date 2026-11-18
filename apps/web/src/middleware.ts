@@ -1,3 +1,4 @@
+import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 import { defineMiddleware } from 'astro:middleware';
 import { getEnv } from './lib/env.ts';
 import { ADMIN_COOKIE, adminCookieValue, isAdminCookie, isAdminToken, isSameOrigin } from './lib/security.ts';
@@ -13,6 +14,32 @@ function withSecurityHeaders(res: Response): Response {
     /* immutable headers (e.g. redirects): leave as is */
   }
   return res;
+}
+
+const COMPRESSIBLE = /^(text\/|application\/(json|xml|javascript|manifest\+json)|image\/svg\+xml)/;
+
+/** Compress text responses: the host does not, and the question list makes pages large. */
+async function compressed(request: Request, res: Response): Promise<Response> {
+  try {
+    if (request.method !== 'GET' || res.status !== 200 || !res.body || res.headers.has('content-encoding')) return res;
+    if (!COMPRESSIBLE.test(res.headers.get('content-type') ?? '')) return res;
+    const accept = request.headers.get('accept-encoding') ?? '';
+    const encoding = /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : null;
+    if (!encoding) return res;
+    const raw = Buffer.from(await res.arrayBuffer());
+    const headers = new Headers(res.headers);
+    headers.append('Vary', 'Accept-Encoding');
+    if (raw.byteLength < 1024) return new Response(raw, { status: res.status, headers });
+    const body =
+      encoding === 'br'
+        ? brotliCompressSync(raw, { params: { [constants.BROTLI_PARAM_QUALITY]: 5, [constants.BROTLI_PARAM_SIZE_HINT]: raw.byteLength } })
+        : gzipSync(raw, { level: 6 });
+    headers.set('Content-Encoding', encoding);
+    headers.delete('Content-Length');
+    return new Response(body, { status: res.status, headers });
+  } catch {
+    return res;
+  }
 }
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
@@ -76,5 +103,5 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
       /* ignore */
     }
   }
-  return withSecurityHeaders(res);
+  return withSecurityHeaders(await compressed(request, res));
 });

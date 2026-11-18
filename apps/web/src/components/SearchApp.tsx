@@ -61,13 +61,20 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
   }, []);
 
   // Searchable text of the question alone, to rank "the question says this" above "a choice says this".
-  const questionOnly = useMemo(() => new Map(entries.map((e) => [e.id, buildSearchText([e.questionText])])), [entries]);
+  // Entries arrive without their searchable text (it is bulky); build it on the first search.
+  const searchable = useRef<Map<number, string> | null>(null);
   const matches = useMemo(() => {
-    const found = entries.filter((e) => matchesQuery(e.searchText, deferredQuery));
-    if (!deferredQuery.trim()) return found;
-    const inQuestion = (e: CardEntry) => matchesQuery(questionOnly.get(e.id) ?? '', deferredQuery);
+    if (!deferredQuery.trim()) return entries;
+    searchable.current ??= new Map(
+      entries.map((e) => [
+        e.id,
+        e.searchText || buildSearchText([e.questionText, ...e.options.map((o) => o.label), ...(e.searchExtra ?? '').split('\n')]),
+      ]),
+    );
+    const found = entries.filter((e) => matchesQuery(searchable.current!.get(e.id) ?? '', deferredQuery));
+    const inQuestion = (e: CardEntry) => matchesQuery(buildSearchText([e.questionText]), deferredQuery);
     return [...found.filter(inQuestion), ...found.filter((e) => !inQuestion(e))];
-  }, [entries, questionOnly, deferredQuery]);
+  }, [entries, deferredQuery]);
   const results = useMemo(() => (lang ? matches.filter((e) => e.lang === lang) : matches), [matches, lang]);
   const otherLangCount = matches.length - results.length;
   const shown = results.slice(0, limit);

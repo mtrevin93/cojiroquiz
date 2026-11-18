@@ -19,6 +19,9 @@ const initialLang = pickInitialLang(
 );
 const matchCount = q ? filterEntries(entries, q, initialLang || null).length : entries.length;
 
+// The browser rebuilds the searchable text itself; sending it would triple the page.
+const slim = entries.map((e) => ({ ...e, searchText: '' }));
+
 const title = q ? `“${oneLine(q, 40)}”: ${matchCount} quiz ${matchCount === 1 ? 'answer' : 'answers'}` : undefined;
 const description = SITE_DESCRIPTION;
 
@@ -29,6 +32,6 @@ Astro.response.headers.set('Vary', 'Accept-Language');
 <Base title={title} description={description} canonicalPath="/" noindex={q !== ''} jsonLd={[websiteJsonLd(env.siteUrl)]}>
   <div class="wrap">
     <h1 class="sr-only">Ocarina of Time Quiz answers (Zelda Notes)</h1>
-    <SearchApp client:load entries={entries} languages={languages} initialQuery={q} initialLang={initialLang} />
+    <SearchApp client:load entries={slim} languages={languages} initialQuery={q} initialLang={initialLang} />
   </div>
 </Base>

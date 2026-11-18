@@ -15,8 +15,9 @@ export const GET: APIRoute = async () => {
     return [
       `## ${q.questionText.replace(/\s*\n\s*/g, ' / ')}`,
       ...(q.pictureUrl ? [`Picture: ${q.pictureDescription ?? 'shown with the question'} (${q.pictureUrl})`] : []),
-      `Choices: ${q.choices.map((c) => choiceText(c)).join(' | ')}`,
-      `Answer: ${answerWords(answer, q.choices.map((c) => choiceText(c)))}${q.disputed ? ' (disputed)' : ''}`,
+      // Picture choices may have no name; the picture itself is then the choice.
+      `Choices: ${q.choices.map((c) => choiceText(c) || c.imageUrl || 'picture').join(' | ')}`,
+      `Answer: ${answer ? answerWords(answer, q.choices.map((c) => choiceText(c))) : (q.choices[q.answerIndex]?.imageUrl ?? 'picture')}${q.disputed ? ' (disputed)' : ''}`,
       `Language: ${q.lang}`,
       `URL: ${site}${questionPath(q.slug)}`,
     ].join('\n');

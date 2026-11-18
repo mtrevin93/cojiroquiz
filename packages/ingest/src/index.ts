@@ -10,6 +10,8 @@ import { type QuizParser, FakeParser, createFixtureParser } from './parser.ts';
 export * from './ingest.ts';
 export * from './parser.ts';
 export * from './claude-parser.ts';
+export * from './source-apply.ts';
+export type { Bundle, BundleImage, BundleQuestion, SourceQuestion } from './source-prepare.ts';
 
 type Env = Record<string, string | undefined>;
 

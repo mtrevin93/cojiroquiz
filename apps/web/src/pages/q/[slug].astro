@@ -26,8 +26,12 @@ const pictureChoices = q.choices.length > 0 && q.choices.every((c) => c.imageUrl
 const wrong = q.choices.filter((_, i) => i !== q.answerIndex);
 const allLabels = q.choices.map((c) => choiceText(c));
 const short = oneLine(q.questionText, 70);
-const title = `${short} Answer: ${oneLine(answerWords(answerText, allLabels), 30)}`;
-const description = `Answer: ${answerWords(answerText, allLabels)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
+// A picture answer may have no name; the page then shows the picture marked as correct.
+const named = answerText.trim() !== '';
+const title = named ? `${short} Answer: ${oneLine(answerWords(answerText, allLabels), 30)}` : `${short} Answer`;
+const description = named
+  ? `Answer: ${answerWords(answerText, allLabels)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`
+  : `The answer, shown as a picture. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
 const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? null;
 ---
 
@@ -38,7 +42,7 @@ const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? nu
   noindex={q.hidden}
   ogImage={ogImage}
   ogType="article"
-  jsonLd={q.hidden ? [] : [qaPageJsonLd(env.siteUrl, q, answerText)]}
+  jsonLd={q.hidden || !named ? [] : [qaPageJsonLd(env.siteUrl, q, answerText)]}
 >
   <div class="wrap narrow qpage">
     <div class="page-head">
@@ -93,12 +97,14 @@ const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? nu
       </div>
     </article>
 
-    <p class="qmeta">
-      {q.submissionCount} {q.submissionCount === 1 ? 'upload' : 'uploads'}
-      {q.answerSource === 'reveal' && ' · answer read from the result screen'}
-      {q.lang !== 'en' && ` · ${langName(q.lang)}`}
-      {q.answerImage && <> · <a href={q.answerImage.url}>result screenshot</a></>}
-    </p>
+    {(q.submissionCount > 0 || q.lang !== 'en') && (
+      <p class="qmeta">
+        {q.submissionCount > 0 && <>{q.submissionCount} {q.submissionCount === 1 ? 'upload' : 'uploads'}</>}
+        {q.answerSource === 'reveal' && ' · answer read from the result screen'}
+        {q.lang !== 'en' && `${q.submissionCount > 0 ? ' · ' : ''}${langName(q.lang)}`}
+        {q.answerImage && <> · <a href={q.answerImage.url}>result screenshot</a></>}
+      </p>
+    )}
 
     <div class="report-row">
       <ReportButton client:idle questionId={q.id} />

@@ -118,6 +118,9 @@ export function insertQuestion(
     answerSource: AnswerSource;
     questionImageId: number | null;
     answerImageId: number | null;
+    submissionCount?: number;
+    answerLocked?: boolean;
+    sourceIds?: string[] | null;
     createdAt: number;
     updatedAt: number;
   },
@@ -138,6 +141,10 @@ export function updateQuestion(
       | 'textKey'
       | 'dedupeKey'
       | 'pictureDescription'
+      | 'pictureKey'
+      | 'picturePhash'
+      | 'answerLocked'
+      | 'sourceIds'
       | 'answerIndex'
       | 'answerSource'
       | 'questionImageId'

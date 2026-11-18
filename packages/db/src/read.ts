@@ -174,6 +174,7 @@ function toSearchEntry(row: Row, urlFor: UrlFor): SearchEntry {
       ...v.choices.map((c) => c.description),
       v.pictureDescription,
     ]),
+    searchExtra: [...v.choices.map((c) => c.description), v.pictureDescription].filter(Boolean).join('\n'),
     answerLabel: choiceText(answer),
     answerImageUrl: v.answerImage?.url ?? null,
     answerChoiceImageUrl: answer?.imageUrl ?? null,

@@ -98,6 +98,8 @@ export interface SearchIndexEntry {
   /** Every choice in the order shown, with the correct one flagged. */
   options: Array<{ label: string; correct: boolean }>;
   searchText: string;
+  /** Searchable text that is not shown on the card (picture names), one per line. Lets a page ship entries without `searchText`. */
+  searchExtra?: string;
   answerLabel: string;
   answerImageUrl: string | null;
   answerChoiceImageUrl: string | null;
