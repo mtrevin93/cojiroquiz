@@ -3229,6 +3229,77 @@ dialog.modal {
   font-size: 1.2rem;
 }
 
+/* 10 / 20 / Endless */
+.practice-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  width: min(100%, 340px);
+  border: 2px solid var(--line, #3a49b8);
+  border-radius: 12px;
+  background: #0b1238;
+  overflow: hidden;
+}
+.practice-mode {
+  min-height: 48px;
+  padding: 0 8px;
+  border: 0;
+  border-left: 2px solid var(--line, #3a49b8);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.practice-mode:first-child {
+  border-left: 0;
+}
+.practice-mode.is-on {
+  background: var(--gold);
+  color: #1a1206;
+}
+.practice-mode:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -3px;
+}
+
+/* counter for long and endless rounds */
+.practice-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.practice-count-of {
+  color: var(--text-muted);
+}
+.practice-tally {
+  display: inline-flex;
+  gap: 14px;
+  margin-left: auto;
+}
+.practice-tally span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.practice-tally svg {
+  width: 16px;
+  height: 16px;
+}
+.practice-tally .is-right {
+  color: var(--b-green);
+}
+.practice-tally .is-wrong {
+  color: var(--wrong);
+}
+
 /* progress dots + clock */
 .practice-hud {
   display: grid;

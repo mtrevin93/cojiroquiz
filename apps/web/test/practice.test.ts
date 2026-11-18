@@ -1,7 +1,7 @@
 import type { SearchIndexEntry } from '@cojiro/shared';
 import { describe, expect, it } from 'vitest';
 import { trueFalse } from '../src/lib/text.ts';
-import { parseProgress, pickRound, record, toPracticeQuestions, type PracticeQuestion, type Progress } from '../src/lib/practice.ts';
+import { parseMode, parseProgress, pickRound, record, toPracticeQuestions, type PracticeQuestion, type Progress } from '../src/lib/practice.ts';
 
 /** Deterministic rng so rounds are reproducible. */
 function seeded(seed = 1): () => number {
@@ -75,14 +75,17 @@ describe('pickRound', () => {
     expect(pickRound(questions(3), {}, 7, seeded())).toHaveLength(3);
   });
 
-  it('prefers unseen questions and brings back two earlier misses', () => {
+  it('asks every unseen question before repeating one, even a missed one', () => {
     const all = questions(30);
     let progress: Progress = {};
     for (let id = 1; id <= 10; id++) progress = record(progress, id, id > 4, id); // 1-4 missed, 5-10 right
-    const ids = pickRound(all, progress, 7, seeded(3)).map((q) => q.id);
-    const missed = ids.filter((id) => id <= 4);
-    expect(missed.sort()).toEqual([1, 2]); // the two missed longest ago
-    expect(ids.filter((id) => id > 10)).toHaveLength(5);
+    const ids = pickRound(all, progress, 20, seeded(3)).map((q) => q.id);
+    expect(ids.sort((a, b) => a - b)).toEqual(Array.from({ length: 20 }, (_, i) => i + 11));
+  });
+
+  it('leaves out questions that are already lined up', () => {
+    const ids = pickRound(questions(12), {}, 10, seeded(2), new Set([1, 2, 3, 4, 5])).map((q) => q.id);
+    expect(ids.sort((a, b) => a - b)).toEqual([6, 7, 8, 9, 10, 11, 12]);
   });
 
   it('falls back to the questions answered longest ago once everything is seen', () => {
@@ -91,6 +94,12 @@ describe('pickRound', () => {
     for (let id = 1; id <= 10; id++) progress = record(progress, id, true, id);
     const ids = pickRound(all, progress, 4, seeded(5)).map((q) => q.id);
     expect(ids.sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe('round length', () => {
+  it('defaults to 10 questions', () => {
+    expect([null, '10', 'x', '20', 'endless'].map(parseMode)).toEqual([10, 10, 10, 20, 'endless']);
   });
 });
 

@@ -28,14 +28,17 @@ export interface Seen {
 }
 export type Progress = Record<string, Seen>;
 
-/**
- * Short enough that every missed question is retried within a couple of minutes,
- * while the first attempt is still fresh.
- */
-export const ROUND_SIZE = 7;
+/** How long a round is. Endless keeps going until the player stops. */
+export type RoundMode = 10 | 20 | 'endless';
+export const ROUND_MODES: readonly RoundMode[] = [10, 20, 'endless'];
+export const DEFAULT_MODE: RoundMode = 10;
+/** Questions fetched at a time in endless mode. */
+export const ENDLESS_BATCH = 10;
 export const SECONDS_PER_QUESTION = 15;
-/** Earlier misses brought back per round, so new questions keep coming. */
-const REVIEW_PER_ROUND = 2;
+
+export function parseMode(raw: string | null): RoundMode {
+  return raw === 'endless' ? 'endless' : raw === '20' ? 20 : DEFAULT_MODE;
+}
 
 /** Questions that can be practised: settled answer, at least two choices, exactly one correct. */
 export function toPracticeQuestions(entries: SearchIndexEntry[]): PracticeQuestion[] {
@@ -67,22 +70,21 @@ export function withShuffledChoices(q: PracticeQuestion, rng: () => number = Mat
 }
 
 /**
- * Next round: a couple of earlier misses, then questions never seen, then the
- * ones answered longest ago. The round itself is in random order.
+ * Next questions, in random order: ones never asked first. A question only comes back
+ * once every question has been asked (then the ones asked longest ago go first), or
+ * after the player resets. `exclude` keeps out questions already lined up.
  */
 export function pickRound(
   questions: readonly PracticeQuestion[],
   progress: Progress,
-  size: number = ROUND_SIZE,
+  size: number,
   rng: () => number = Math.random,
+  exclude: ReadonlySet<number> = new Set(),
 ): PracticeQuestion[] {
-  const pool = shuffle(questions, rng);
-  const missed = pool.filter((q) => progress[q.id]?.missed).sort((a, b) => progress[a.id]!.at - progress[b.id]!.at);
+  const pool = shuffle(questions, rng).filter((q) => !exclude.has(q.id));
   const unseen = pool.filter((q) => !progress[q.id]);
-  const known = pool.filter((q) => progress[q.id] && !progress[q.id]!.missed).sort((a, b) => progress[a.id]!.at - progress[b.id]!.at);
-
-  const review = missed.slice(0, REVIEW_PER_ROUND);
-  const picked = [...review, ...unseen, ...missed.slice(REVIEW_PER_ROUND), ...known].slice(0, size);
+  const seen = pool.filter((q) => progress[q.id]).sort((a, b) => progress[a.id]!.at - progress[b.id]!.at);
+  const picked = [...unseen, ...seen].slice(0, size);
   return shuffle(picked, rng).map((q) => withShuffledChoices(q, rng));
 }
 

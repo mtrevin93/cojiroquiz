@@ -3,7 +3,7 @@ import { buildSearchIndex, questionsWithMarkedChoicePictures } from '@cojiro/db'
 import PracticeApp from '../components/PracticeApp.tsx';
 import Base from '../layouts/Base.astro';
 import { pageContext, pickInitialLang } from '../lib/page.ts';
-import { ROUND_SIZE, SECONDS_PER_QUESTION, toPracticeQuestions } from '../lib/practice.ts';
+import { SECONDS_PER_QUESTION, toPracticeQuestions } from '../lib/practice.ts';
 
 const { db, urlFor } = await pageContext();
 // Picture choices cropped from a result screenshot show the game's check mark, so they are left out.
@@ -24,7 +24,7 @@ Astro.response.headers.set('Vary', 'Accept-Language');
 
 <Base
   title="Practice the Ocarina of Time Quiz"
-  description={`Practice the Ocarina of Time Quiz from Zelda Notes: rounds of ${ROUND_SIZE} questions, ${SECONDS_PER_QUESTION} seconds each, with the ones you miss repeated.`}
+  description={`Practice the Ocarina of Time Quiz from Zelda Notes: 10 questions, 20 questions or endless, ${SECONDS_PER_QUESTION} seconds each.`}
   canonicalPath="/practice"
 >
   <div class="wrap">
@@ -33,7 +33,6 @@ Astro.response.headers.set('Vary', 'Accept-Language');
       questions={questions}
       languages={languages}
       initialLang={initialLang}
-      roundSize={ROUND_SIZE}
       seconds={SECONDS_PER_QUESTION}
     />
   </div>

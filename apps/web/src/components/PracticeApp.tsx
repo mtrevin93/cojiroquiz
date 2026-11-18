@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ENDLESS_BATCH,
+  ROUND_MODES,
+  parseMode,
   parseProgress,
   pickRound,
   record,
@@ -7,6 +10,7 @@ import {
   withShuffledChoices,
   type PracticeQuestion,
   type Progress,
+  type RoundMode,
 } from '../lib/practice.ts';
 import { langName } from '../lib/text.ts';
 import { CheckIcon, CrossIcon } from './icons.tsx';
@@ -18,7 +22,6 @@ interface Props {
   /** Languages that have questions, most questions first. */
   languages: string[];
   initialLang: string;
-  roundSize: number;
   seconds: number;
 }
 
@@ -32,6 +35,8 @@ interface Result {
 type Phase = 'start' | 'question' | 'reveal' | 'summary';
 
 const STORE_KEY = 'cojiro.practice.v1';
+const MODE_KEY = 'cojiro.practice.mode';
+const modeName = (m: RoundMode) => (m === 'endless' ? 'Endless' : String(m));
 /** A correct answer moves on by itself; a miss waits so the right answer can be read. */
 const ADVANCE_MS = 1100;
 /** The clock waits for the pictures, but not forever on a slow connection. */
@@ -59,9 +64,12 @@ function ChoiceLabel({ label, of }: { label: string; of: PracticeQuestion }) {
   );
 }
 
-export default function PracticeApp({ questions, languages, initialLang, roundSize, seconds }: Props) {
+export default function PracticeApp({ questions, languages, initialLang, seconds }: Props) {
   const [lang, setLang] = useState(initialLang);
   const [phase, setPhase] = useState<Phase>('start');
+  const [mode, setMode] = useState<RoundMode>(10);
+  /** True while the current run keeps adding questions until the player ends it. */
+  const [endless, setEndless] = useState(false);
   const [progress, setProgress] = useState<Progress>({});
   const [round, setRound] = useState<PracticeQuestion[]>([]);
   const [roundNo, setRoundNo] = useState(0);
@@ -79,6 +87,7 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
   useEffect(() => {
     try {
       setProgress(parseProgress(window.localStorage.getItem(STORE_KEY)));
+      setMode(parseMode(window.localStorage.getItem(MODE_KEY)));
     } catch {
       /* storage blocked: progress just lasts for this visit */
     }
@@ -93,8 +102,18 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
     }
   };
 
-  const begin = (qs: PracticeQuestion[]) => {
+  const chooseMode = (m: RoundMode) => {
+    setMode(m);
+    try {
+      window.localStorage.setItem(MODE_KEY, String(m));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const begin = (qs: PracticeQuestion[], keepGoing = false) => {
     if (qs.length === 0) return;
+    setEndless(keepGoing);
     setRound(qs);
     setRoundNo((n) => n + 1);
     setIndex(0);
@@ -102,7 +121,7 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
     setReady(false);
     setPhase('question');
   };
-  const newRound = () => begin(pickRound(pool, progress, roundSize));
+  const newRound = () => begin(pickRound(pool, progress, mode === 'endless' ? ENDLESS_BATCH : mode), mode === 'endless');
   const missed = results.filter((r) => !r.correct).map((r) => r.question);
   const retryMissed = () => begin(shuffle(missed).map((q) => withShuffledChoices(q)));
 
@@ -119,14 +138,23 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
 
   const next = useCallback(() => {
     if (phase !== 'reveal') return;
-    if (index + 1 < round.length) {
+    let total = round.length;
+    if (endless && index + 1 >= round.length) {
+      // Line up the next few, leaving out everything already asked in this run while unasked ones remain.
+      const more = pickRound(pool, progress, ENDLESS_BATCH, Math.random, new Set(round.slice(-ENDLESS_BATCH).map((q) => q.id)));
+      if (more.length > 0) {
+        setRound([...round, ...more]);
+        total += more.length;
+      }
+    }
+    if (index + 1 < total) {
       setIndex(index + 1);
       setReady(false);
       setPhase('question');
     } else {
       setPhase('summary');
     }
-  }, [phase, index, round.length]);
+  }, [phase, index, round, endless, pool, progress]);
 
   // Start the clock once the pictures are on screen; warm up the next question's pictures.
   useEffect(() => {
@@ -193,13 +221,29 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
     );
   }
 
+  const seenCount = pool.filter((q) => progress[q.id]).length;
+
   if (phase === 'start') {
     return (
       <div className="practice practice-start">
         <img className="mascot" src="/cojiro.webp" alt="" width={148} height={140} />
         <h1>Practice</h1>
+        <div className="practice-modes" role="radiogroup" aria-label="Number of questions">
+          {ROUND_MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              className={mode === m ? 'practice-mode is-on' : 'practice-mode'}
+              onClick={() => chooseMode(m)}
+            >
+              {modeName(m)}
+            </button>
+          ))}
+        </div>
         <p className="practice-rules">
-          {Math.min(roundSize, pool.length)} questions. {seconds} seconds each.
+          {mode === 'endless' ? 'Keeps going until you end it.' : `${Math.min(mode, pool.length)} questions.`} {seconds} seconds each.
         </p>
         {languages.length > 1 && (
           <label className="practice-lang">
@@ -216,6 +260,14 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
         <button type="button" className="btn practice-go" onClick={newRound}>
           Start
         </button>
+        {seenCount > 0 && (
+          <p className="practice-seen">
+            {seenCount} of {pool.length} questions seen{' · '}
+            <button type="button" className="link-btn" onClick={() => save({})}>
+              Reset
+            </button>
+          </p>
+        )}
       </div>
     );
   }
@@ -294,17 +346,40 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
 
   if (!current) return null;
   const pictures = current.choices.every((c) => c.imageUrl);
+  const rightCount = results.filter((r) => r.correct).length;
   const status = !answered ? '' : answered.correct ? 'Correct' : answered.picked === null ? "Time's up" : 'Wrong';
 
   return (
     <div className="practice">
       <div className="practice-hud">
-        <ol className="practice-dots" aria-label={`Question ${index + 1} of ${round.length}`}>
-          {round.map((q, i) => {
-            const r = results[i];
-            return <li key={q.id} className={r ? (r.correct ? 'is-right' : 'is-wrong') : i === index ? 'is-now' : undefined} />;
-          })}
-        </ol>
+        {endless || round.length > 10 ? (
+          <div className="practice-count">
+            <span aria-label={endless ? `Question ${index + 1}` : `Question ${index + 1} of ${round.length}`}>
+              {index + 1}
+              {!endless && <span className="practice-count-of"> / {round.length}</span>}
+            </span>
+            <span className="practice-tally" aria-label={`${rightCount} right, ${results.length - rightCount} wrong`}>
+              <span className="is-right">
+                <CheckIcon /> {rightCount}
+              </span>
+              <span className="is-wrong">
+                <CrossIcon /> {results.length - rightCount}
+              </span>
+            </span>
+            {endless && (
+              <button type="button" className="btn small secondary" onClick={() => setPhase('summary')}>
+                End
+              </button>
+            )}
+          </div>
+        ) : (
+          <ol className="practice-dots" aria-label={`Question ${index + 1} of ${round.length}`}>
+            {round.map((q, i) => {
+              const r = results[i];
+              return <li key={q.id} className={r ? (r.correct ? 'is-right' : 'is-wrong') : i === index ? 'is-now' : undefined} />;
+            })}
+          </ol>
+        )}
         <div className={`practice-timer${answered ? ' is-stopped' : ''}`} aria-hidden="true">
           <span
             key={`${roundNo}-${index}`}
@@ -378,7 +453,7 @@ export default function PracticeApp({ questions, languages, initialLang, roundSi
             <div className="practice-foot-actions">
               <ReportButton questionId={current.id} />
               <button type="button" className="btn" ref={nextRef} onClick={next}>
-                {index + 1 < round.length ? 'Next' : 'Finish'}
+                {endless || index + 1 < round.length ? 'Next' : 'Finish'}
               </button>
             </div>
           )}
