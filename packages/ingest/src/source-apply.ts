@@ -17,6 +17,8 @@ export interface ApplyReport {
   /** Questions from an earlier import, refreshed. */
   refreshed: number;
   /** An upload-based question that looks like a source question but has a different answer. Both are kept. */
+  /** An upload-based question whose answer was an uploader's own pick and differed from the source; now uses the source answer. */
+  corrected: Array<{ questionId: number; slug: string; sourceId: string }>;
   conflicts: Array<{ questionId: number; slug: string; sourceId: string }>;
   /** Upload-based questions with no source question. Left as they are. */
   unmatched: Array<{ id: number; slug: string }>;
@@ -123,7 +125,7 @@ function storedChoices(q: BundleQuestion, bundle: Bundle, match: SiteMatch | nul
  * address and uploads stay) and gets the clean source pictures.
  */
 export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now()): ApplyReport {
-  const report: ApplyReport = { inserted: 0, linked: 0, refreshed: 0, conflicts: [], unmatched: [] };
+  const report: ApplyReport = { inserted: 0, linked: 0, refreshed: 0, corrected: [], conflicts: [], unmatched: [] };
   db.transaction((tx) => {
     const rows = listAllQuestions(tx);
     const bySource = new Map<string, QuestionRow>();
@@ -158,8 +160,14 @@ export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now()): A
       const match = candidates[0];
       if (!match) continue;
       if (!match.agrees) {
-        report.conflicts.push({ questionId: match.row.id, slug: match.row.slug, sourceId: q.sourceIds[0]! });
-        continue;
+        const entry = { questionId: match.row.id, slug: match.row.slug, sourceId: q.sourceIds[0]! };
+        if (match.row.answerSource === 'reveal') {
+          // The game's own result screen said otherwise: keep both for a person to look at.
+          report.conflicts.push(entry);
+          continue;
+        }
+        // An uploader's own pick loses to the game's list.
+        report.corrected.push(entry);
       }
       claimed.add(match.row.id);
       matches.set(q, match);
