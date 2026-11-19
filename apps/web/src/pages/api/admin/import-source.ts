@@ -11,7 +11,7 @@ const json = (body: unknown, status = 200) =>
  * Loads a prepared question bundle (packages/ingest/bin/source-prepare.ts) that has been
  * copied to the server. Admin only (src/middleware.ts). Two steps, both safe to repeat:
  *   ?step=images&from=0&count=300   copy that slice of pictures to the public bucket
- *   ?step=questions                 add or refresh the questions
+ *   ?step=questions&from=0&count=200   add or refresh that slice of questions (small slices: it blocks the server while it runs)
  */
 export const POST: APIRoute = async ({ url }) => {
   const dir = process.env.IMPORT_DIR || '/data/import/bundle';
@@ -47,8 +47,23 @@ export const POST: APIRoute = async ({ url }) => {
   }
 
   if (step === 'questions') {
-    const report = applyBundle(getDb(), bundle);
-    return json({ ...report, unmatched: report.unmatched.map((u) => u.id) });
+    // In batches: the import is synchronous, and a long one stops the site answering.
+    const from = Math.max(0, Number(url.searchParams.get('from')) || 0);
+    const count = Math.min(1000, Math.max(1, Number(url.searchParams.get('count')) || 200));
+    const slice = bundle.questions.slice(from, from + count);
+    const started = Date.now();
+    const report = applyBundle(getDb(), { images: bundle.images, questions: slice });
+    return json({
+      total: bundle.questions.length,
+      from,
+      done: slice.length,
+      ms: Date.now() - started,
+      inserted: report.inserted,
+      linked: report.linked,
+      refreshed: report.refreshed,
+      corrected: report.corrected,
+      conflicts: report.conflicts,
+    });
   }
 
   return json({ error: 'step must be "images" or "questions"' }, 400);
