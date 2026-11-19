@@ -4,7 +4,7 @@ import type { UrlFor } from '@cojiro/db';
 import { getEnv } from './env.ts';
 import { ADMIN_COOKIE, isAdminCookie } from './security.ts';
 import { getDb, getStore } from './services.ts';
-export { pickInitialLang } from './page-lang.ts';
+export { LANG_COOKIE, pickInitialLang, sortLanguages } from './page-lang.ts';
 
 export async function pageContext() {
   const store = await getStore();

@@ -1,25 +1,23 @@
 ---
-import { buildSearchIndex, questionsWithMarkedChoicePictures } from '@cojiro/db';
+import { buildSearchIndex, listLanguages, questionsWithMarkedChoicePictures, regionalRepeatIds } from '@cojiro/db';
 import PracticeApp from '../components/PracticeApp.tsx';
 import Base from '../layouts/Base.astro';
-import { pageContext, pickInitialLang } from '../lib/page.ts';
+import { LANG_COOKIE, pageContext, pickInitialLang } from '../lib/page.ts';
 import { SECONDS_PER_QUESTION, toPracticeQuestions } from '../lib/practice.ts';
 
 const { db, urlFor } = await pageContext();
 // Picture choices cropped from a result screenshot show the game's check mark, so they are left out.
 const marked = questionsWithMarkedChoicePictures(db);
-const questions = toPracticeQuestions(buildSearchIndex(db, urlFor).filter((e) => !marked.has(e.id)));
+// A round stays in one language, and only that language's questions are sent.
+const languages = listLanguages(db).map((l) => l.value);
+const initialLang = pickInitialLang(Astro.url.searchParams.get('lang'), Astro.cookies.get(LANG_COOKIE)?.value ?? null, languages);
+// The same question in a second regional wording would be asked twice.
+const repeats = regionalRepeatIds(db, initialLang);
+const questions = toPracticeQuestions(
+  buildSearchIndex(db, urlFor, { lang: initialLang }).filter((e) => !marked.has(e.id) && !repeats.has(e.id)),
+);
 
-// Languages that have questions, most questions first. A round stays in one language.
-const counts = new Map<string, number>();
-for (const q of questions) counts.set(q.lang, (counts.get(q.lang) ?? 0) + 1);
-const languages = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([l]) => l);
-const initialLang =
-  pickInitialLang(Astro.url.searchParams.get('lang'), Astro.request.headers.get('accept-language'), languages) ||
-  languages[0] ||
-  'en';
-
-Astro.response.headers.set('Vary', 'Accept-Language');
+Astro.response.headers.set('Vary', 'Cookie');
 ---
 
 <Base
@@ -31,7 +29,6 @@ Astro.response.headers.set('Vary', 'Accept-Language');
     <PracticeApp
       client:load
       questions={questions}
-      languages={languages}
       initialLang={initialLang}
       seconds={SECONDS_PER_QUESTION}
     />

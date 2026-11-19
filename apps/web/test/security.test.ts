@@ -121,15 +121,16 @@ describe('slugs', () => {
 });
 
 describe('initial language', () => {
-  it('uses ?lang= when valid, "all" for no filter', () => {
-    expect(pickInitialLang('ja', 'en-US', ['en', 'ja'])).toBe('ja');
-    expect(pickInitialLang('all', 'ja', ['en', 'ja'])).toBe('');
-    expect(pickInitialLang('xx', null, ['en', 'ja'])).toBe('');
+  it('uses ?lang= when it names a language that has questions', () => {
+    expect(pickInitialLang('ja', 'en', ['en', 'ja'])).toBe('ja');
+    expect(pickInitialLang('pt-BR', null, ['en', 'pt'])).toBe('pt');
+    expect(pickInitialLang('zh-TW', null, ['en', 'zh-cn', 'zh-tw'])).toBe('zh-tw');
+    expect(pickInitialLang('xx', 'ja', ['en', 'ja'])).toBe('ja');
   });
-  it('falls back to the browser language only when it has entries and there is a choice', () => {
-    expect(pickInitialLang(null, 'ja-JP,ja;q=0.9,en;q=0.8', ['en', 'ja'])).toBe('ja');
-    expect(pickInitialLang(null, 'fr-FR,fr;q=0.9', ['en', 'ja'])).toBe('');
-    expect(pickInitialLang(null, 'fr-FR,en;q=0.5', ['en', 'ja'])).toBe('en');
-    expect(pickInitialLang(null, 'ja', ['en'])).toBe('');
+  it('otherwise the language picked earlier, then English', () => {
+    expect(pickInitialLang(null, 'ja', ['en', 'ja'])).toBe('ja');
+    expect(pickInitialLang(null, null, ['ja', 'en'])).toBe('en');
+    expect(pickInitialLang(null, 'fr', ['ja', 'en'])).toBe('en');
+    expect(pickInitialLang(null, null, ['ja', 'es'])).toBe('ja');
   });
 });

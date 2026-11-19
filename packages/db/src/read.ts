@@ -1,7 +1,7 @@
 // Read-side queries used by pages (owned by the web track).
 import { and, count, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { buildSearchText, matchesQuery } from '@cojiro/shared';
+import { buildSearchText, langKey, matchesQuery } from '@cojiro/shared';
 import type { QuestionDTO, ReportReason, SearchIndexEntry, StoredChoice } from '@cojiro/shared';
 import type { Db } from './client.ts';
 import { feedback, images, quarantine, questions, reports, submissions } from './schema.ts';
@@ -116,10 +116,19 @@ function baseQuery(db: Db) {
     .leftJoin(aImg, eq(questions.answerImageId, aImg.id));
 }
 
+/**
+ * Rows in one language. `lang` is a language key (langKey): "pt" covers pt, pt-BR and pt-PT;
+ * Chinese is split by region ("zh-cn", "zh-tw").
+ */
+function langIs(lang: string) {
+  const key = langKey(lang);
+  return key.includes('-') ? sql`lower(${questions.lang}) = ${key}` : sql`(lower(${questions.lang}) = ${key} or lower(${questions.lang}) like ${key + '-%'})`;
+}
+
 function filterWhere(f: QuestionFilter) {
   return and(
     f.includeHidden ? undefined : eq(questions.hidden, false),
-    f.lang ? eq(questions.lang, f.lang) : undefined,
+    f.lang ? langIs(f.lang) : undefined,
     f.level ? eq(questions.level, f.level) : undefined,
   );
 }
@@ -273,15 +282,38 @@ export function listLevels(db: Db): Facet[] {
     .filter((r): r is Facet => !!r.value);
 }
 
-/** Languages of visible questions with counts, most questions first. */
+/** Languages of visible questions (as language keys, see langKey) with counts, most questions first. */
 export function listLanguages(db: Db): Facet[] {
-  return db
+  const rows = db
     .select({ value: questions.lang, count: count() })
     .from(questions)
     .where(eq(questions.hidden, false))
     .groupBy(questions.lang)
-    .orderBy(desc(count()), questions.lang)
     .all();
+  const totals = new Map<string, number>();
+  for (const r of rows) totals.set(langKey(r.value), (totals.get(langKey(r.value)) ?? 0) + r.count);
+  return [...totals.entries()].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
+/**
+ * Questions that repeat another one in a regional wording (the same source question from
+ * es-MX next to es-ES). Search shows both wordings; practice asks only the first.
+ */
+export function regionalRepeatIds(db: Db, lang: string): Set<number> {
+  const rows = db
+    .select({ id: questions.id, sourceIds: questions.sourceIds })
+    .from(questions)
+    .where(and(eq(questions.hidden, false), langIs(lang), isNotNull(questions.sourceIds)))
+    .orderBy(questions.id)
+    .all();
+  const owner = new Set<string>();
+  const repeats = new Set<number>();
+  for (const r of rows) {
+    const bare = (r.sourceIds ?? []).map((s) => s.slice(s.indexOf(':') + 1));
+    if (bare.length > 0 && bare.every((b) => owner.has(b))) repeats.add(r.id);
+    for (const b of bare) owner.add(b);
+  }
+  return repeats;
 }
 
 /** Slugs + timestamps of visible questions, for the sitemap. */

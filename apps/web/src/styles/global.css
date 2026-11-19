@@ -3790,3 +3790,158 @@ dialog.modal {
 .dropzone.is-compact .dropzone-icon {
   display: none;
 }
+
+/* language picker: a globe in the header with the native list laid over it */
+.lang-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 40px;
+  min-height: 40px;
+  margin-left: 8px;
+  padding: 0 8px;
+  justify-content: center;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.lang-pick:hover,
+.lang-pick:focus-within {
+  border-color: #3a49b8;
+  color: var(--text);
+}
+.lang-pick-code {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lang-pick select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* no zoom on focus on phones */
+}
+@media (max-width: 480px) {
+  .lang-pick {
+    min-width: 36px;
+    margin-left: 2px;
+    padding: 0 4px;
+  }
+  .lang-pick-code {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .site-header .wrap {
+    gap: 4px;
+  }
+  .wordmark {
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+  }
+  .wordmark .mark {
+    width: 32px;
+    height: 32px;
+  }
+  .site-nav .btn {
+    margin-left: 2px;
+    padding-inline: 8px;
+    font-size: 0.86rem;
+  }
+}
+
+/* ---------- refinement pass ---------- */
+
+/* browser surfaces in the site's colours */
+html {
+  scrollbar-color: var(--line-strong) #070b22;
+}
+input,
+textarea {
+  caret-color: var(--gold);
+}
+
+/* The green box with the check already says "answer": the label stays for screen readers only. */
+.answer-kicker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Section headings read as headings, not as tracked-out labels. */
+.section-label,
+.about-list dt {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+/* Pictures keep their shape while loading, so the page does not jump. Source pictures are 4:3 and 16:9. */
+.choice-pics img {
+  aspect-ratio: 4 / 3;
+}
+.qcard-picture {
+  aspect-ratio: 16 / 9;
+}
+.qpage .qcard-picture {
+  max-height: none;
+}
+
+/* Counts line up as they change. */
+.search-status,
+.practice-seen,
+.practice-score {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Long words in any language wrap inside their box. */
+.qcard-text,
+.opts li,
+.answer-text,
+.practice-q-text,
+.practice-choice-text,
+.other-choices li {
+  overflow-wrap: anywhere;
+}
+
+/* header on the narrowest phones */
+@media (max-width: 480px) {
+  .lang-pick {
+    min-width: 40px;
+    min-height: 44px;
+  }
+}
+@media (max-width: 374px) {
+  .wordmark {
+    font-size: 0.82rem;
+  }
+  .wordmark .mark {
+    width: 28px;
+    height: 28px;
+  }
+  .site-nav .btn {
+    padding-inline: 7px;
+    font-size: 0.82rem;
+  }
+  .lang-pick {
+    min-width: 34px;
+    margin-left: 0;
+    padding: 0 2px;
+  }
+}
+@media (max-width: 340px) {
+  /* The mark alone carries the name on the very smallest screens. */
+  .wordmark span {
+    display: none;
+  }
+}

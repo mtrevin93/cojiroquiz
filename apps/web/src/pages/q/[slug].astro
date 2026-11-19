@@ -28,9 +28,9 @@ const allLabels = q.choices.map((c) => choiceText(c));
 const short = oneLine(q.questionText, 70);
 // A picture answer may have no name; the page then shows the picture marked as correct.
 const named = answerText.trim() !== '';
-const title = named ? `${short} Answer: ${oneLine(answerWords(answerText, allLabels), 30)}` : `${short} Answer`;
+const title = named ? `${short} Answer: ${oneLine(answerWords(answerText, allLabels, q.lang), 30)}` : `${short} Answer`;
 const description = named
-  ? `Answer: ${answerWords(answerText, allLabels)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`
+  ? `Answer: ${answerWords(answerText, allLabels, q.lang)}. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`
   : `The answer, shown as a picture. Ocarina of Time Quiz (Zelda Notes) question: ${oneLine(q.questionText, 140)}`;
 const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? null;
 ---
@@ -90,7 +90,7 @@ const ogImage = q.pictureUrl ?? q.answerImage?.url ?? q.questionImage?.url ?? nu
           <div class="other-choices">
             <h2 class="section-label">Other choices</h2>
             <ul lang={q.lang}>
-              {wrong.map((c) => <li>{answerWords(choiceText(c), allLabels)}</li>)}
+              {wrong.map((c) => <li>{answerWords(choiceText(c), allLabels, q.lang)}</li>)}
             </ul>
           </div>
         )}

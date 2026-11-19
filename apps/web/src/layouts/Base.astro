@@ -4,7 +4,11 @@ import '@fontsource/cinzel/700.css';
 import '@fontsource/cinzel/900.css';
 import '../styles/global.css';
 import FeedbackButton from '../components/FeedbackButton.tsx';
+import { listLanguages } from '@cojiro/db';
 import { getEnv } from '../lib/env.ts';
+import { LANG_COOKIE, pickInitialLang, sortLanguages } from '../lib/page-lang.ts';
+import { getDb } from '../lib/services.ts';
+import { langName } from '../lib/text.ts';
 import { safeJsonLd } from '../lib/security.ts';
 import { HOME_TITLE, SITE_DESCRIPTION, SITE_NAME } from '../lib/seo.ts';
 
@@ -30,6 +34,10 @@ const {
   ogType = 'website',
   jsonLd = [],
 } = Astro.props;
+
+// Language picker in the header. Each language is its own page load.
+const languages = sortLanguages(listLanguages(getDb()).map((l) => l.value));
+const currentLang = pickInitialLang(Astro.url.searchParams.get('lang'), Astro.cookies.get(LANG_COOKIE)?.value ?? null, languages);
 
 const fullTitle = title ? `${title} | ${SITE_NAME}` : HOME_TITLE;
 const canonical = env.siteUrl + canonicalPath;
@@ -84,9 +92,35 @@ const path = Astro.url.pathname;
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"></path></svg>
             Upload
           </a>
+          {languages.length > 1 && (
+            <label class="lang-pick" title="Language">
+              <span class="sr-only">Language</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.8 3.8 5.8 3.8 9s-1.3 6.200-3.8 9c-2.5-2.800-3.800-5.800-3.800-9S9.500 5.800 12 3z"></path></svg>
+              <span class="lang-pick-code" aria-hidden="true">{currentLang.split('-').pop()}</span>
+              <select id="site-lang" data-cookie={LANG_COOKIE}>
+                {languages.map((l) => <option value={l} selected={l === currentLang}>{langName(l)}</option>)}
+              </select>
+            </label>
+          )}
         </nav>
       </div>
     </header>
+    <script is:inline>
+      (() => {
+        const pick = document.getElementById('site-lang');
+        if (!pick) return;
+        pick.addEventListener('change', () => {
+          document.cookie = `${pick.dataset.cookie}=${encodeURIComponent(pick.value)}; path=/; max-age=31536000; samesite=lax`;
+          // Search and practice stay where they are in the new language; other pages go to search.
+          const here = location.pathname;
+          if (here === '/' || here === '/practice') {
+            const url = new URL(location.href);
+            url.searchParams.delete('lang');
+            location.assign(url.pathname + url.search);
+          } else location.assign('/');
+        });
+      })();
+    </script>
     <main id="main">
       <slot />
     </main>

@@ -2,22 +2,18 @@
 import { buildSearchIndex, filterEntries, listLanguages } from '@cojiro/db';
 import SearchApp from '../components/SearchApp.tsx';
 import Base from '../layouts/Base.astro';
-import { pageContext, pickInitialLang } from '../lib/page.ts';
+import { LANG_COOKIE, pageContext, pickInitialLang } from '../lib/page.ts';
 import { SITE_DESCRIPTION, websiteJsonLd } from '../lib/seo.ts';
 import { oneLine } from '../lib/text.ts';
 
 const { db, urlFor, env } = await pageContext();
-const entries = buildSearchIndex(db, urlFor);
 const languages = listLanguages(db);
 
 const q = (Astro.url.searchParams.get('q') ?? '').slice(0, 200);
 const langParam = Astro.url.searchParams.get('lang');
-const initialLang = pickInitialLang(
-  langParam,
-  Astro.request.headers.get('accept-language'),
-  languages.map((l) => l.value),
-);
-const matchCount = q ? filterEntries(entries, q, initialLang || null).length : entries.length;
+const initialLang = pickInitialLang(langParam, Astro.cookies.get(LANG_COOKIE)?.value ?? null, languages.map((l) => l.value));
+const entries = buildSearchIndex(db, urlFor, { lang: initialLang });
+const matchCount = q ? filterEntries(entries, q).length : entries.length;
 
 // The browser rebuilds the searchable text itself; sending it would triple the page.
 const slim = entries.map((e) => ({ ...e, searchText: '' }));
@@ -25,13 +21,13 @@ const slim = entries.map((e) => ({ ...e, searchText: '' }));
 const title = q ? `“${oneLine(q, 40)}”: ${matchCount} quiz ${matchCount === 1 ? 'answer' : 'answers'}` : undefined;
 const description = SITE_DESCRIPTION;
 
-// The default language comes from Accept-Language, so shared caches must not mix variants.
-Astro.response.headers.set('Vary', 'Accept-Language');
+// The language comes from a cookie, so shared caches must not mix variants.
+Astro.response.headers.set('Vary', 'Cookie');
 ---
 
 <Base title={title} description={description} canonicalPath="/" noindex={q !== ''} jsonLd={[websiteJsonLd(env.siteUrl)]}>
   <div class="wrap">
     <h1 class="sr-only">Ocarina of Time Quiz answers (Zelda Notes)</h1>
-    <SearchApp client:load entries={slim} languages={languages} initialQuery={q} initialLang={initialLang} />
+    <SearchApp client:load entries={slim} initialQuery={q} initialLang={initialLang} />
   </div>
 </Base>

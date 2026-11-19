@@ -103,11 +103,14 @@ function fit(row: QuestionRow, q: BundleQuestion, bundle: Bundle): SiteMatch | n
 
 type Names = Map<string, { label: string; description: string | null }>;
 
+/** Picture names are per language: the key is language + picture. */
+const nameKey = (lang: string, imageKey: string) => `${langKey(lang)}\u001f${imageKey}`;
+
 function storedChoices(q: BundleQuestion, bundle: Bundle, match: SiteMatch | null, names: Names): StoredChoice[] {
   return q.choices.map((c, j) => {
     const image = c.image ? bundle.images[c.image] : undefined;
     // Keep the names people already see for a picture choice; the same picture gets the same name everywhere.
-    const old = (match?.pairs ? match.row.choices[match.pairs.indexOf(j)] : undefined) ?? (image ? names.get(image.key) : undefined);
+    const old = (match?.pairs ? match.row.choices[match.pairs.indexOf(j)] : undefined) ?? (image ? names.get(nameKey(q.lang, image.key)) : undefined);
     return {
       // The game's own name for a picture beats one written from a screenshot.
       label: c.label || old?.label || '',
@@ -141,17 +144,27 @@ export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now()): A
       }
     }
     const claimed = new Set<number>();
+    // The first import stored bare ids for what is now the en-GB list.
+    const rowFor = (q: BundleQuestion) => {
+      for (const id of q.sourceIds) {
+        const row = bySource.get(id) ?? (id.startsWith('en-GB:') ? bySource.get(id.slice(6)) : undefined);
+        if (row && langKey(row.lang) === langKey(q.lang)) return row;
+      }
+      return undefined;
+    };
 
     // First pass: pair source questions with upload-based ones, and collect the names
     // those uploads gave to pictures.
     const names: Names = new Map();
     for (const row of rows) {
       if (!row.sourceIds?.length) continue;
-      for (const c of row.choices) if (c.imageKey && c.label) names.set(c.imageKey, { label: c.label, description: c.description });
+      for (const c of row.choices) {
+        if (c.imageKey && c.label) names.set(nameKey(row.lang, c.imageKey), { label: c.label, description: c.description });
+      }
     }
     const matches = new Map<BundleQuestion, SiteMatch>();
     for (const q of bundle.questions) {
-      if (q.sourceIds.some((id) => bySource.has(id))) continue;
+      if (rowFor(q)) continue;
       const candidates = (free.get(`${langKey(q.lang)}\u001f${canonical(q.questionText)}`) ?? [])
         .filter((row) => !claimed.has(row.id))
         .map((row) => fit(row, q, bundle))
@@ -174,12 +187,13 @@ export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now()): A
       match.pairs?.forEach((j, i) => {
         const key = q.choices[j]?.image ? bundle.images[q.choices[j]!.image!]?.key : undefined;
         const old = match.row.choices[i];
-        if (key && old?.label && !names.has(key)) names.set(key, { label: old.label, description: old.description });
+        const nk = key ? nameKey(q.lang, key) : null;
+        if (nk && old?.label && !names.has(nk)) names.set(nk, { label: old.label, description: old.description });
       });
     }
 
     for (const q of bundle.questions) {
-      const known = q.sourceIds.map((id) => bySource.get(id)).find(Boolean);
+      const known = rowFor(q);
       const match = matches.get(q) ?? null;
 
       const choices = storedChoices(q, bundle, match, names);

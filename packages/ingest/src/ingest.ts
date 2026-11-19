@@ -258,6 +258,8 @@ function duplicatePairs(db: Parameters<typeof listAllQuestions>[0]): Array<{ kee
     const kept: QuestionRow[] = [];
     for (const q of ranked) {
       const twin = kept.find((k) => {
+        // Two questions from the game's own list are different questions, however alike they look.
+        if (k.sourceIds?.length && q.sourceIds?.length) return false;
         if (!samePicture(k.picturePhash, q.picturePhash)) return false;
         if (matchQuestion(k, q.choices, storedVisual(q))) return true;
         const a = q.choices[q.answerIndex];

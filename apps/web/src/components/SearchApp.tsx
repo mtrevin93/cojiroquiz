@@ -1,42 +1,35 @@
 import { buildSearchText, matchesQuery } from '@cojiro/shared/normalize';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { langName } from '../lib/text.ts';
 import { CloseIcon, SearchIcon } from './icons.tsx';
 import QuestionCard, { type CardEntry } from './QuestionCard.tsx';
 
 interface Props {
   entries: CardEntry[];
-  languages: Array<{ value: string; count: number }>;
   initialQuery: string;
-  /** '' means all languages. */
+  /** Language key of the questions in `entries`. Another language is another page load. */
   initialLang: string;
 }
 
 const PAGE = 48;
 
-function syncUrl(q: string, lang: string, explicitLang: boolean) {
+function syncUrl(q: string) {
   const url = new URL(window.location.href);
   if (q) url.searchParams.set('q', q);
   else url.searchParams.delete('q');
-  if (explicitLang) url.searchParams.set('lang', lang || 'all');
   window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
 }
 
-export default function SearchApp({ entries, languages, initialQuery, initialLang }: Props) {
+export default function SearchApp({ entries, initialQuery, initialLang }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [lang, setLang] = useState(initialLang);
   const [limit, setLimit] = useState(PAGE);
   const [hydrated, setHydrated] = useState(false);
-  const explicitLang = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
   const deferredQuery = useDeferredValue(query);
-  const multiLang = languages.length > 1;
 
   useEffect(() => {
     setHydrated(true);
-    explicitLang.current = new URL(window.location.href).searchParams.has('lang');
     // "/" focuses the search box (desktop habit), Escape clears it.
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -75,17 +68,15 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
     const inQuestion = (e: CardEntry) => matchesQuery(buildSearchText([e.questionText]), deferredQuery);
     return [...found.filter(inQuestion), ...found.filter((e) => !inQuestion(e))];
   }, [entries, deferredQuery]);
-  const results = useMemo(() => (lang ? matches.filter((e) => e.lang === lang) : matches), [matches, lang]);
-  const otherLangCount = matches.length - results.length;
+  const results = matches;
+  const lang = initialLang;
   const shown = results.slice(0, limit);
 
-  const update = (q: string, l: string) => {
+  const update = (q: string, _lang?: string) => {
     setQuery(q);
-    setLang(l);
     setLimit(PAGE);
-    syncUrl(q.trim(), l, explicitLang.current);
+    syncUrl(q.trim());
   };
-
   return (
     <div>
       <div ref={sentinelRef} aria-hidden="true" />
@@ -147,30 +138,6 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
               )
             )}
           </div>
-          {multiLang && (
-            <>
-              <label className="sr-only" htmlFor="lang">
-                Language
-              </label>
-              <select
-                id="lang"
-                name="lang"
-                className="search-lang"
-                value={lang || 'all'}
-                onChange={(e) => {
-                  explicitLang.current = true;
-                  update(query, e.target.value === 'all' ? '' : e.target.value);
-                }}
-              >
-                <option value="all">All languages</option>
-                {languages.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {langName(l.value)} ({l.count})
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
           <noscript>
             <button type="submit" className="btn">
               Search
@@ -183,28 +150,13 @@ export default function SearchApp({ entries, languages, initialQuery, initialLan
         {results.length === entries.length
           ? `${entries.length} ${entries.length === 1 ? 'question' : 'questions'}`
           : `${results.length} of ${entries.length} questions`}
-        {lang && otherLangCount > 0 && (
-          <>
-            {' · '}
-            <button
-              type="button"
-              className="link-btn"
-              onClick={() => {
-                explicitLang.current = true;
-                update(query, '');
-              }}
-            >
-              {otherLangCount} more in other languages
-            </button>
-          </>
-        )}
       </p>
 
       {shown.length > 0 ? (
         <ul className="card-grid">
           {shown.map((e) => (
             <li key={e.id}>
-              <QuestionCard entry={e} showLang={multiLang} />
+              <QuestionCard entry={e} showLang={false} />
             </li>
           ))}
         </ul>

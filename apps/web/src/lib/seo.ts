@@ -9,8 +9,8 @@ export const SITE_DESCRIPTION =
   'Answers to the Ocarina of Time Quiz in Zelda Notes: Egg Level, Cucco Level and Cojiro Challenge. Search any word from the question to get the answer.';
 
 /** "✓" and "X" read as True / False in titles and descriptions. */
-export function answerWords(label: string, allLabels: readonly string[]): string {
-  const tf = trueFalse(label, allLabels);
+export function answerWords(label: string, allLabels: readonly string[], lang = 'en'): string {
+  const tf = trueFalse(label, allLabels, lang);
   return tf === 'true' ? 'True (✓)' : tf === 'false' ? 'False (X)' : label;
 }
 

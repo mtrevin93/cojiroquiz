@@ -38,7 +38,9 @@ const CROSS = /^[xX✗✕✖×]$/u;
  * Statement questions have exactly two choices, a check mark and an X, which read as
  * True and False. Anywhere else a lone "X" is just the letter (e.g. the X Button).
  */
-export function trueFalse(label: string, allLabels: readonly string[]): 'true' | 'false' | null {
+export function trueFalse(label: string, allLabels: readonly string[], lang = 'en'): 'true' | 'false' | null {
+  // The words are English; in any other language the game's own symbol is the answer.
+  if (primaryLang(lang) !== 'en') return null;
   const all = allLabels.map((l) => l.trim());
   if (all.length !== 2 || !all.some((l) => CHECK.test(l)) || !all.some((l) => CROSS.test(l))) return null;
   const t = label.trim();
@@ -54,7 +56,7 @@ export function oneLine(text: string, max = 110): string {
 
 const LANG_NAMES: Record<string, string> = {
   en: 'English', ja: '日本語', es: 'Español', fr: 'Français', de: 'Deutsch', it: 'Italiano',
-  pt: 'Português', nl: 'Nederlands', ko: '한국어', zh: '中文', ru: 'Русский',
+  pt: 'Português', nl: 'Nederlands', ko: '한국어', zh: '中文', ru: 'Русский', pl: 'Polski',
 };
 
 export function primaryLang(lang: string): string {
@@ -63,6 +65,9 @@ export function primaryLang(lang: string): string {
 
 /** Human name for a BCP-47 tag, falling back to the tag itself. */
 export function langName(lang: string): string {
+  const tag = lang.trim().toLowerCase();
+  if (tag === 'zh-cn') return '简体中文';
+  if (tag === 'zh-tw') return '繁體中文';
   const name = LANG_NAMES[primaryLang(lang)];
   if (!name) return lang;
   return lang.includes('-') ? `${name} (${lang})` : name;

@@ -49,8 +49,9 @@ export function QuestionText({ text }: { text: string }) {
 export function answerDisplay(
   label: string,
   allLabels: readonly string[],
+  lang = 'en',
 ): { icon: 'check' | 'cross'; text: string; symbol: string | null } {
-  const tf = trueFalse(label, allLabels);
+  const tf = trueFalse(label, allLabels, lang);
   if (tf === 'true') return { icon: 'check', text: 'True', symbol: '✓' };
   if (tf === 'false') return { icon: 'cross', text: 'False', symbol: 'X' };
   return { icon: 'check', text: label, symbol: null };
@@ -71,7 +72,7 @@ export function AnswerBox({
 }) {
   // A picture answer without a name: the check mark on the picture is the answer.
   if (!label.trim()) return null;
-  const d = answerDisplay(label, allLabels);
+  const d = answerDisplay(label, allLabels, lang);
   return (
     <div className="answer">
       <span className="answer-badge">{d.icon === 'cross' ? <CrossIcon /> : <CheckIcon />}</span>
@@ -141,7 +142,7 @@ export default function QuestionCard({ entry, showLang = true }: { entry: CardEn
       ) : (
         <ul className="opts" lang={entry.lang} aria-label="Choices">
           {entry.options.map((o, i) => {
-            const d = answerDisplay(o.label, entry.options.map((x) => x.label));
+            const d = answerDisplay(o.label, entry.options.map((x) => x.label), entry.lang);
             return (
               <li key={i} className={o.correct ? 'is-right' : undefined}>
                 {o.correct && (

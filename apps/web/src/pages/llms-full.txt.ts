@@ -5,11 +5,13 @@ import { getEnv } from '../lib/env.ts';
 import { answerWords } from '../lib/seo.ts';
 import { getDb, getStore } from '../lib/services.ts';
 
-/** Every visible question with its choices and answer, as plain text. */
-export const GET: APIRoute = async () => {
+/** Every visible question in one language with its choices and answer, as plain text. */
+export const GET: APIRoute = async ({ url }) => {
   const site = getEnv().siteUrl;
   const store = await getStore();
-  const questions = listQuestions(getDb(), (key) => store.publicUrl(key), { limit: 20000 });
+  // One language per file (English unless ?lang= says otherwise): every language together is tens of megabytes.
+  const lang = (url.searchParams.get('lang') || 'en').slice(0, 16);
+  const questions = listQuestions(getDb(), (key) => store.publicUrl(key), { limit: 20000, lang });
   const blocks = questions.map((q) => {
     const answer = choiceText(q.choices[q.answerIndex]);
     return [
@@ -17,7 +19,7 @@ export const GET: APIRoute = async () => {
       ...(q.pictureUrl ? [`Picture: ${q.pictureDescription ?? 'shown with the question'} (${q.pictureUrl})`] : []),
       // Picture choices may have no name; the picture itself is then the choice.
       `Choices: ${q.choices.map((c) => choiceText(c) || c.imageUrl || 'picture').join(' | ')}`,
-      `Answer: ${answer ? answerWords(answer, q.choices.map((c) => choiceText(c))) : (q.choices[q.answerIndex]?.imageUrl ?? 'picture')}${q.disputed ? ' (disputed)' : ''}`,
+      `Answer: ${answer ? answerWords(answer, q.choices.map((c) => choiceText(c)), q.lang) : (q.choices[q.answerIndex]?.imageUrl ?? 'picture')}${q.disputed ? ' (disputed)' : ''}`,
       `Language: ${q.lang}`,
       `URL: ${site}${questionPath(q.slug)}`,
     ].join('\n');

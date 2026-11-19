@@ -4,6 +4,7 @@
  * can load into a database. Runs locally; needs sharp.
  */
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { canonical } from '@cojiro/shared';
@@ -12,6 +13,8 @@ import { dHash } from './image.ts';
 
 /** One question as the game sends it. The first option is the correct one. */
 export interface SourceQuestion {
+  /** Locale the wording is in, e.g. "en-GB". Absent for a single-language list. */
+  locale?: string;
   id: string;
   level: string;
   question: string;
@@ -28,7 +31,7 @@ export interface BundleImage {
 }
 
 export interface BundleQuestion {
-  /** Every source id folded into this question (same wording, picture and answer). */
+  /** Every source id folded into this question (same wording, picture and answer), as "locale:id" when the list has locales. */
   sourceIds: string[];
   lang: string;
   level: string | null;
@@ -63,6 +66,14 @@ function seededOrder(n: number, seed: string): number[] {
   return order;
 }
 
+/** The language a locale's questions are stored under: its primary tag; Chinese keeps its region. */
+export function storedLang(locale: string): string {
+  const [primary = 'und', region] = locale.trim().split(/[-_]/);
+  return primary.toLowerCase() === 'zh' && region ? `zh-${region.toUpperCase()}` : primary.toLowerCase();
+}
+
+const sourceId = (q: SourceQuestion) => (q.locale ? `${q.locale}:${q.id}` : q.id);
+
 const answerId = (q: SourceQuestion) => q.options[0]!.imageFile || canonical(q.options[0]!.text);
 
 /**
@@ -81,7 +92,7 @@ export function foldQuestions(source: SourceQuestion[]): Array<{ keep: SourceQue
   }
   return [...groups.values()].map((g) => {
     const keep = g.reduce((a, b) => (b.options.length > a.options.length ? b : a));
-    return { keep, ids: [keep.id, ...g.filter((q) => q !== keep).map((q) => q.id)] };
+    return { keep, ids: [...new Set([sourceId(keep), ...g.filter((q) => q !== keep).map(sourceId)])] };
   });
 }
 
@@ -116,6 +127,24 @@ export function pictureNames(source: SourceQuestion[]): Map<string, string> {
   return names;
 }
 
+/**
+ * Picture names in another language. Only the "same picture, named by a naming question"
+ * rule carries over: the naming question is found in `english`, and its answer in `local`
+ * (same question id) is the picture's name in that language.
+ */
+export function localPictureNames(english: SourceQuestion[], local: SourceQuestion[]): Map<string, string> {
+  const byId = new Map(local.map((q) => [q.id, q]));
+  const names = new Map<string, string>();
+  for (const q of english) {
+    const answer = q.options[0];
+    if (!q.questionImageFile || !answer || answer.imageFile || !NAMING.test((q.question ?? '').replace(/\s+/gu, ' ').trim())) continue;
+    const twin = q.questionImageFile.replace(/_16x9$/, '_4x3');
+    const name = byId.get(q.id)?.options[0]?.text?.replace(/\s+/gu, ' ').trim();
+    if (twin !== q.questionImageFile && name && !names.has(twin)) names.set(twin, name);
+  }
+  return names;
+}
+
 export function toBundleQuestion(q: SourceQuestion, ids: string[], names: Map<string, string> = new Map()): BundleQuestion {
   const order = seededOrder(q.options.length, q.id);
   const choices = order.map((i) => {
@@ -126,8 +155,9 @@ export function toBundleQuestion(q: SourceQuestion, ids: string[], names: Map<st
   });
   return {
     sourceIds: ids,
-    lang: 'en',
-    level: LEVELS[q.level] ?? null,
+    lang: q.locale ? storedLang(q.locale) : 'en',
+    // The level names are only known in English.
+    level: !q.locale || storedLang(q.locale) === 'en' ? (LEVELS[q.level] ?? null) : null,
     questionText: q.question,
     picture: q.questionImageFile || null,
     choices,
@@ -135,25 +165,65 @@ export function toBundleQuestion(q: SourceQuestion, ids: string[], names: Map<st
   };
 }
 
-/** Resize every referenced picture into `outDir/images` and write `outDir/bundle.json`. */
-export async function prepareBundle(source: SourceQuestion[], imagesDir: string, outDir: string): Promise<Bundle> {
-  const names = pictureNames(source);
-  const questions = foldQuestions(source).map(({ keep, ids }) => toBundleQuestion(keep, ids, names));
+export interface LocaleSource {
+  locale: string;
+  questions: SourceQuestion[];
+}
+
+/**
+ * Questions for every language. Locales of one language (en-GB + en-US, es-ES + es-MX)
+ * are folded together: where the wording is the same there is one question, where it
+ * differs both are kept. The first locale listed for a language is its main one.
+ */
+export function bundleQuestions(sources: LocaleSource[]): BundleQuestion[] {
+  const english = sources.find((s) => storedLang(s.locale) === 'en')?.questions ?? [];
+  const groups = new Map<string, LocaleSource[]>();
+  for (const s of sources) {
+    const lang = storedLang(s.locale);
+    groups.set(lang, [...(groups.get(lang) ?? []), s]);
+  }
+  const out: BundleQuestion[] = [];
+  for (const [lang, group] of groups) {
+    const main = group[0]!.questions;
+    const names = lang === 'en' ? pictureNames(main) : localPictureNames(english, main);
+    const all = group.flatMap((s) => s.questions.map((q) => ({ ...q, locale: s.locale })));
+    for (const { keep, ids } of foldQuestions(all)) out.push(toBundleQuestion(keep, ids, names));
+  }
+  return out;
+}
+
+/** Resize every referenced picture into `outDir/images` and write `outDir/bundle.json`. Pictures already there are kept. */
+export async function prepareBundle(sources: LocaleSource[] | SourceQuestion[], imagesDir: string, outDir: string): Promise<Bundle> {
+  const questions =
+    sources.length > 0 && 'questions' in sources[0]!
+      ? bundleQuestions(sources as LocaleSource[])
+      : foldQuestions(sources as SourceQuestion[]).map(({ keep, ids }) => toBundleQuestion(keep, ids, pictureNames(sources as SourceQuestion[])));
   const edges = new Map<string, number>();
   for (const q of questions) {
     if (q.picture) edges.set(q.picture, QUESTION_EDGE);
     for (const c of q.choices) if (c.image && !edges.has(c.image)) edges.set(c.image, CHOICE_EDGE);
   }
   await mkdir(join(outDir, 'images'), { recursive: true });
+  let previous: Record<string, BundleImage> = {};
+  try {
+    previous = (JSON.parse(await readFile(join(outDir, 'bundle.json'), 'utf8')) as Bundle).images;
+  } catch {
+    /* first run */
+  }
   const images: Record<string, BundleImage> = {};
   for (const [name, edge] of edges) {
     if (!/^[A-Za-z0-9_-]+$/.test(name)) throw new Error(`Unexpected picture name: ${JSON.stringify(name)}`);
+    const file = join(outDir, 'images', `${name}.webp`);
+    if (previous[name] && existsSync(file)) {
+      images[name] = previous[name]!;
+      continue;
+    }
     const raw = await readFile(join(imagesDir, `${name}.webp`));
     const { data, info } = await sharp(raw)
       .resize({ width: edge, height: edge, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer({ resolveWithObject: true });
-    await writeFile(join(outDir, 'images', `${name}.webp`), data);
+    await writeFile(file, data);
     images[name] = { key: sourceImageKey(name), phash: await dHash(new Uint8Array(data)), width: info.width, height: info.height };
   }
   const bundle: Bundle = { images, questions };

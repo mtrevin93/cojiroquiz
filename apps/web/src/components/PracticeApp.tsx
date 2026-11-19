@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ENDLESS_BATCH,
   ROUND_MODES,
@@ -12,15 +12,12 @@ import {
   type Progress,
   type RoundMode,
 } from '../lib/practice.ts';
-import { langName } from '../lib/text.ts';
 import { CheckIcon, CrossIcon } from './icons.tsx';
 import { answerDisplay, questionPath, QuestionText } from './QuestionCard.tsx';
 import ReportButton from './ReportButton.tsx';
 
 interface Props {
   questions: PracticeQuestion[];
-  /** Languages that have questions, most questions first. */
-  languages: string[];
   initialLang: string;
   seconds: number;
 }
@@ -55,7 +52,7 @@ function loadImage(url: string): Promise<void> {
 }
 
 function ChoiceLabel({ label, of }: { label: string; of: PracticeQuestion }) {
-  const d = answerDisplay(label, of.choices.map((c) => c.label));
+  const d = answerDisplay(label, of.choices.map((c) => c.label), of.lang);
   return (
     <>
       {d.text}
@@ -64,8 +61,8 @@ function ChoiceLabel({ label, of }: { label: string; of: PracticeQuestion }) {
   );
 }
 
-export default function PracticeApp({ questions, languages, initialLang, seconds }: Props) {
-  const [lang, setLang] = useState(initialLang);
+export default function PracticeApp({ questions, initialLang, seconds }: Props) {
+  const lang = initialLang;
   const [phase, setPhase] = useState<Phase>('start');
   const [mode, setMode] = useState<RoundMode>(10);
   /** True while the current run keeps adding questions until the player ends it. */
@@ -79,7 +76,8 @@ export default function PracticeApp({ questions, languages, initialLang, seconds
   const [ready, setReady] = useState(false);
   const nextRef = useRef<HTMLButtonElement>(null);
 
-  const pool = useMemo(() => questions.filter((q) => q.lang === lang), [questions, lang]);
+  // The page sends one language's questions; another language is another page load.
+  const pool = questions;
   const current = round[index];
   const last = results[results.length - 1];
   const answered = phase === 'reveal' && last?.question === current ? last : null;
@@ -245,18 +243,6 @@ export default function PracticeApp({ questions, languages, initialLang, seconds
         <p className="practice-rules">
           {mode === 'endless' ? 'Keeps going until you end it.' : `${Math.min(mode, pool.length)} questions.`} {seconds} seconds each.
         </p>
-        {languages.length > 1 && (
-          <label className="practice-lang">
-            <span className="sr-only">Language</span>
-            <select value={lang} onChange={(e) => setLang(e.target.value)}>
-              {languages.map((l) => (
-                <option key={l} value={l}>
-                  {langName(l)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <button type="button" className="btn practice-go" onClick={newRound}>
           Start
         </button>
