@@ -3945,3 +3945,22 @@ textarea {
     display: none;
   }
 }
+
+/* admin review: the question's own picture, whole, so the answer can be checked against it */
+.review-picture {
+  max-width: 640px;
+  max-height: none;
+  margin: 16px 0 0;
+  object-fit: contain;
+}
+
+/* practice: the question's pictures have not arrived */
+.practice-stuck {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+  margin: 0 0 14px;
+  color: var(--text-muted);
+}

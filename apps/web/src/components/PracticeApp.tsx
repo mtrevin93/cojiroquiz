@@ -36,18 +36,27 @@ const MODE_KEY = 'cojiro.practice.mode';
 const modeName = (m: RoundMode) => (m === 'endless' ? 'Endless' : String(m));
 /** A correct answer moves on by itself; a miss waits so the right answer can be read. */
 const ADVANCE_MS = 1100;
-/** The clock waits for the pictures, but not forever on a slow connection. */
-const IMAGE_WAIT_MS = 2500;
+/** After this long without the pictures, offer to skip the question. The clock still waits. */
+const IMAGE_SLOW_MS = 6000;
+/** Waits before each further try at a picture that failed to load. */
+const IMAGE_RETRY_MS = [600, 1500];
 
 function imageUrls(q: PracticeQuestion): string[] {
   return [q.pictureUrl, ...q.choices.map((c) => c.imageUrl)].filter((u): u is string => !!u);
 }
 
-function loadImage(url: string): Promise<void> {
+/** Load a picture, trying again when it fails. Gives the address that worked, or null. */
+function loadImage(url: string, attempt = 0): Promise<string | null> {
   return new Promise((resolve) => {
+    const src = attempt === 0 ? url : `${url}${url.includes('?') ? '&' : '?'}r=${attempt}`;
     const img = new Image();
-    img.onload = img.onerror = () => resolve();
-    img.src = url;
+    img.onload = () => resolve(src);
+    img.onerror = () => {
+      const wait = IMAGE_RETRY_MS[attempt];
+      if (wait === undefined) resolve(null);
+      else window.setTimeout(() => void loadImage(url, attempt + 1).then(resolve), wait);
+    };
+    img.src = src;
   });
 }
 
@@ -74,6 +83,11 @@ export default function PracticeApp({ questions, initialLang, seconds }: Props) 
   const [results, setResults] = useState<Result[]>([]);
   /** False while the current question's pictures are still loading; the clock has not started. */
   const [ready, setReady] = useState(false);
+  /** Why the current question is not ready yet, once that is worth saying. */
+  const [stuck, setStuck] = useState<'slow' | 'failed' | null>(null);
+  /** Pictures that only loaded on a later try: original address -> the one that worked. */
+  const [loaded, setLoaded] = useState<Record<string, string>>({});
+  const src = (url: string) => loaded[url] ?? url;
   const nextRef = useRef<HTMLButtonElement>(null);
 
   // The page sends one language's questions; another language is another page load.
@@ -159,19 +173,27 @@ export default function PracticeApp({ questions, initialLang, seconds }: Props) 
     if (phase !== 'question' || !current) return;
     let live = true;
     const urls = imageUrls(current);
-    const go = () => live && setReady(true);
-    if (urls.length === 0) go();
+    setStuck(null);
+    let slow = 0;
+    if (urls.length === 0) setReady(true);
     else {
-      const cap = window.setTimeout(go, IMAGE_WAIT_MS);
-      void Promise.all(urls.map(loadImage)).then(() => {
-        window.clearTimeout(cap);
-        go();
+      // The clock only starts with every picture on screen.
+      slow = window.setTimeout(() => live && setStuck('slow'), IMAGE_SLOW_MS);
+      void Promise.all(urls.map((u) => loadImage(u))).then((got) => {
+        window.clearTimeout(slow);
+        if (!live) return;
+        if (got.some((g) => g === null)) return setStuck('failed');
+        const moved = urls.filter((u, i) => got[i] !== u);
+        if (moved.length > 0) setLoaded((m) => ({ ...m, ...Object.fromEntries(moved.map((u) => [u, got[urls.indexOf(u)]!])) }));
+        setStuck(null);
+        setReady(true);
       });
     }
     const upcoming = round[index + 1];
     if (upcoming) imageUrls(upcoming).forEach((u) => void loadImage(u));
     return () => {
       live = false;
+      window.clearTimeout(slow);
     };
   }, [phase, current, round, index]);
 
@@ -181,6 +203,18 @@ export default function PracticeApp({ questions, initialLang, seconds }: Props) 
     const t = window.setTimeout(() => answer(null), seconds * 1000);
     return () => window.clearTimeout(t);
   }, [phase, ready, seconds, answer]);
+
+  /** Drop the current question from the run without counting it: its pictures did not load. */
+  const skip = () => {
+    if (phase !== 'question' || !current) return;
+    let rest = round.filter((_, i) => i !== index);
+    if (endless && index >= rest.length) {
+      rest = [...rest, ...pickRound(pool, progress, ENDLESS_BATCH, Math.random, new Set(round.slice(-ENDLESS_BATCH).map((q) => q.id)))];
+    }
+    setReady(false);
+    setRound(rest);
+    if (index >= rest.length) setPhase(results.length > 0 ? 'summary' : 'start');
+  };
 
   // After the answer: move on by itself when right, otherwise put focus on Next.
   useEffect(() => {
@@ -377,11 +411,20 @@ export default function PracticeApp({ questions, initialLang, seconds }: Props) 
 
       <div className="practice-stage" key={`${roundNo}-${index}`}>
         <div className="practice-q" lang={current.lang}>
-          {current.pictureUrl && <img className="practice-q-pic" src={current.pictureUrl} alt="Picture shown with the question" />}
+          {current.pictureUrl && <img className="practice-q-pic" src={src(current.pictureUrl)} alt="Picture shown with the question" data-noretry />}
           <p className="practice-q-text">
             <QuestionText text={current.text} />
           </p>
         </div>
+
+        {stuck && !ready && !answered && (
+          <div className="practice-stuck" role="status">
+            <span>{stuck === 'failed' ? "A picture didn't load." : 'Pictures are slow to load.'}</span>
+            <button type="button" className="btn small secondary" onClick={skip}>
+              Skip question
+            </button>
+          </div>
+        )}
 
         <ul className={pictures ? 'practice-choices is-pictures' : 'practice-choices'} lang={current.lang}>
           {current.choices.map((c, i) => {
@@ -403,7 +446,7 @@ export default function PracticeApp({ questions, initialLang, seconds }: Props) 
                 >
                   {c.imageUrl ? (
                     <>
-                      <img src={c.imageUrl} alt="" />
+                      <img src={src(c.imageUrl)} alt="" data-noretry />
                       {answered && (
                         <span className="practice-choice-name">
                           <ChoiceLabel label={c.label} of={current} />

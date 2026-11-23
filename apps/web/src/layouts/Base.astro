@@ -75,6 +75,26 @@ const path = Astro.url.pathname;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={image} />
     {jsonLd.map((data) => <script type="application/ld+json" is:inline set:html={safeJsonLd(data)} />)}
+      <script is:inline>
+      // A picture that fails to load is tried again twice before it is left blank.
+      document.addEventListener(
+        'error',
+        function (e) {
+          var img = e.target;
+          if (!img || img.tagName !== 'IMG' || img.hasAttribute('data-noretry')) return;
+          var n = Number(img.dataset.retry || 0);
+          var base = img.dataset.src || img.currentSrc || img.src;
+          if (!/^https?:/.test(base)) return;
+          if (n >= 2) return img.classList.add('img-failed');
+          img.dataset.src = base;
+          img.dataset.retry = String(n + 1);
+          setTimeout(function () {
+            img.src = base + (base.indexOf('?') < 0 ? '?' : '&') + 'r=' + (n + 1);
+          }, n === 0 ? 600 : 1500);
+        },
+        true,
+      );
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>

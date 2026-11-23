@@ -49,6 +49,7 @@ const labelFor = (canon: string) => {
       {q.answerLocked && <span class="tag">Answer set by you</span>}
       {open.length > 0 && <span class="tag disputed">{open.length} open {open.length === 1 ? 'report' : 'reports'}</span>}
     </div>
+    {q.pictureUrl && <img class="qcard-picture review-picture" src={q.pictureUrl} alt="Picture shown with the question" decoding="async" />}
 
     <form class="review-form" method="post" action="/api/admin/review-set-answer">
       <input type="hidden" name="id" value={q.id} />
