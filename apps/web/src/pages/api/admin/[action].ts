@@ -84,6 +84,8 @@ export const POST: APIRoute = async (ctx) => {
     }
     case 'review-dismiss':
       resolveReportsForQuestion(db, id);
+      // Keeping the answer is a ruling that it is right.
+      setQuestionDisputed(db, id, false);
       return review('Reports closed. Answer unchanged.');
     case 'review-hide':
       setQuestionHidden(db, id, str('value') !== '0');
