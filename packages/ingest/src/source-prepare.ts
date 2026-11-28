@@ -99,11 +99,32 @@ export function foldQuestions(source: SourceQuestion[]): Array<{ keep: SourceQue
 const NAMING = /^(what is this(?: [\p{L}-]+)* called|who is this|what is this|which [\p{L}-]+ is this)\??$/iu;
 const WHICH_IS = /^which of these is (?:(?:a|an|the) )?(\p{Lu}[^?]*)\??$/iu;
 
+const ARTICLE = /^(?:a|an|the) /i;
+const IS_QUESTION = /^(?:which(?: of these| one)?|who|what) (?:is|are|was) (.+?)\??$/iu;
+
+/**
+ * What a question says its answer is: "Which is the Bazaar's door?" -> "the Bazaar's door".
+ * Null unless that reads as a name for the thing: it starts with an article or a capital,
+ * and is not a negative ("not a Kokiri"), a superlative or a dangling fragment ("Nabooru looking for").
+ */
+export function describedAs(question: string): string | null {
+  // "In Kakariko Village, which is ...?"
+  const m = IS_QUESTION.exec(question.replace(/^[^,?]{3,40}, (?=(?:which|who|what)\b)/iu, ''));
+  const name = m?.[1]?.trim();
+  if (!name || name.length > 64) return null;
+  if (!ARTICLE.test(name) && !/^\p{Lu}/u.test(name)) return null;
+  if (/^(?:the (?:most|least|only|odd|correct|right|same)|one of)\b/i.test(name)) return null;
+  if (/\b(?:not|never|cannot|isn't|can't|doesn't|don't)\b/i.test(name)) return null;
+  if (/ (?:for|to|by|with|of|in|at|from|on)$/i.test(name)) return null;
+  return name;
+}
+
 /**
  * Names for choice pictures, taken from the game's own wording:
  * - "Which of these is Ruto?" names the correct picture "Ruto";
  * - a choice picture X_0123_4x3 shows the same thing as question picture X_0123_16x9, and
- *   "What is this monster called?" over that picture is answered with its name.
+ *   "What is this monster called?" over that picture is answered with its name;
+ * - "Which is Granny's husband?" names the correct picture "Granny's husband".
  */
 export function pictureNames(source: SourceQuestion[]): Map<string, string> {
   const names = new Map<string, string>();
@@ -123,6 +144,20 @@ export function pictureNames(source: SourceQuestion[]): Map<string, string> {
     const m = WHICH_IS.exec(clean(q.question ?? ''));
     const name = m?.[1] && /^\p{Lu}/u.test(m[1]) ? clean(m[1]) : null;
     if (answer?.imageFile && name && !names.has(answer.imageFile)) names.set(answer.imageFile, name);
+  }
+  // Descriptions: "Which is Granny's husband?", "Which of these is the owner of the Bazaar?".
+  const described = new Map<string, string[]>();
+  for (const q of source) {
+    const answer = q.options[0];
+    if (!answer?.imageFile || names.has(answer.imageFile)) continue;
+    const name = describedAs(clean(q.question ?? ''));
+    if (name) described.set(answer.imageFile, [...(described.get(answer.imageFile) ?? []), name]);
+  }
+  for (const [image, found] of described) {
+    // A proper name ("Granny") beats a description ("the lake scientist's apprentice"); then the shortest.
+    const best = found.reduce((x, y) => (Number(ARTICLE.test(y)) - Number(ARTICLE.test(x)) || y.length - x.length) < 0 ? y : x);
+    const bare = best.replace(ARTICLE, '');
+    names.set(image, bare.charAt(0).toUpperCase() + bare.slice(1));
   }
   return names;
 }

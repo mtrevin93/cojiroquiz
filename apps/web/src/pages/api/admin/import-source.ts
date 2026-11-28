@@ -12,6 +12,7 @@ const json = (body: unknown, status = 200) =>
  * copied to the server. Admin only (src/middleware.ts). Two steps, both safe to repeat:
  *   ?step=images&from=0&count=300   copy that slice of pictures to the public bucket
  *   ?step=questions&from=0&count=200   add or refresh that slice of questions (small slices: it blocks the server while it runs)
+ *     &names=game   picture choices keep only the names the bundle gives them
  */
 export const POST: APIRoute = async ({ url }) => {
   const dir = process.env.IMPORT_DIR || '/data/import/bundle';
@@ -52,7 +53,9 @@ export const POST: APIRoute = async ({ url }) => {
     const count = Math.min(1000, Math.max(1, Number(url.searchParams.get('count')) || 200));
     const slice = bundle.questions.slice(from, from + count);
     const started = Date.now();
-    const report = applyBundle(getDb(), { images: bundle.images, questions: slice });
+    const report = applyBundle(getDb(), { images: bundle.images, questions: slice }, Date.now(), {
+      gameNamesOnly: url.searchParams.get('names') === 'game',
+    });
     return json({
       total: bundle.questions.length,
       from,

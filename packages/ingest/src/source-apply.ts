@@ -106,14 +106,14 @@ type Names = Map<string, { label: string; description: string | null }>;
 /** Picture names are per language: the key is language + picture. */
 const nameKey = (lang: string, imageKey: string) => `${langKey(lang)}\u001f${imageKey}`;
 
-function storedChoices(q: BundleQuestion, bundle: Bundle, match: SiteMatch | null, names: Names): StoredChoice[] {
+function storedChoices(q: BundleQuestion, bundle: Bundle, match: SiteMatch | null, names: Names, gameNamesOnly: boolean): StoredChoice[] {
   return q.choices.map((c, j) => {
     const image = c.image ? bundle.images[c.image] : undefined;
     // Keep the names people already see for a picture choice; the same picture gets the same name everywhere.
     const old = (match?.pairs ? match.row.choices[match.pairs.indexOf(j)] : undefined) ?? (image ? names.get(nameKey(q.lang, image.key)) : undefined);
     return {
       // The game's own name for a picture beats one written from a screenshot.
-      label: c.label || old?.label || '',
+      label: c.label || (gameNamesOnly && c.kind === 'image' ? '' : old?.label) || '',
       kind: c.kind,
       description: old?.description ?? null,
       imageKey: image?.key ?? null,
@@ -127,7 +127,16 @@ function storedChoices(q: BundleQuestion, bundle: Bundle, match: SiteMatch | nul
  * an upload-based question that is the same question is updated in place (its id,
  * address and uploads stay) and gets the clean source pictures.
  */
-export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now()): ApplyReport {
+export interface ApplyOptions {
+  /**
+   * Picture choices are named only by the bundle (the game's own wording). Names read from
+   * screenshots or typed in admin are dropped, and a picture the game does not name has none.
+   */
+  gameNamesOnly?: boolean;
+}
+
+export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now(), options: ApplyOptions = {}): ApplyReport {
+  const gameNamesOnly = options.gameNamesOnly ?? false;
   const report: ApplyReport = { inserted: 0, linked: 0, refreshed: 0, corrected: [], conflicts: [], unmatched: [] };
   db.transaction((tx) => {
     const rows = listAllQuestions(tx);
@@ -196,12 +205,12 @@ export function applyBundle(db: Db, bundle: Bundle, now: number = Date.now()): A
       const known = rowFor(q);
       const match = matches.get(q) ?? null;
 
-      const choices = storedChoices(q, bundle, match, names);
+      const choices = storedChoices(q, bundle, match, names, gameNamesOnly);
       const picture = q.picture ? bundle.images[q.picture] : undefined;
       const textKey = computeDedupeKey(q.lang, q.questionText, choices);
       const target = known ?? match?.row;
       if (target) {
-        const kept = known ? target.choices : null;
+        const kept = known && !gameNamesOnly ? target.choices : null;
         // On a refresh keep any picture names an admin has since changed.
         const merged = kept
           ? choices.map((c) => {

@@ -59,3 +59,39 @@ describe('applying a bundle', () => {
     expect(listAllQuestions(db).map((q) => [q.id, q.slug, q.answerIndex])).toEqual(first.map((q) => [q.id, q.slug, q.answerIndex]));
   });
 });
+
+describe('names the game gives away', () => {
+  it('reads a description out of the question', async () => {
+    const { describedAs } = await import('../src/source-prepare.ts');
+    expect(describedAs("Which is Granny's husband?")).toBe("Granny's husband");
+    expect(describedAs('Which of these is the owner of the Potion Shop?')).toBe('the owner of the Potion Shop');
+    expect(describedAs("In Kakariko Village, which is the master craftsman's daughter?")).toBe("the master craftsman's daughter");
+    for (const q of [
+      'Which is not a Kokiri?',
+      'Which of these is located in the Fire Temple?',
+      'Which is easy to break?',
+      'What is Nabooru looking for?',
+      'Which of these items is the most expensive to buy at a shop?',
+      'Who has a cucco allergy?',
+    ]) {
+      expect(describedAs(q), q).toBeNull();
+    }
+  });
+
+  it('names the correct picture, preferring a proper name', () => {
+    const pic = (id: string, question: string, answer: string): SourceQuestion => ({
+      id,
+      level: 'advanced',
+      question,
+      options: [{ text: '', imageFile: answer }, { text: '', imageFile: 'NPC_0999_4x3' }],
+    });
+    const names = pictureNames([
+      pic('a', "Who is the lake scientist's apprentice?", 'NPC_0128_4x3'),
+      pic('b', 'Who is Granny?', 'NPC_0128_4x3'),
+      pic('c', 'Which of these is the owner of the Bazaar?', 'NPC_0051_4x3'),
+    ]);
+    expect(names.get('NPC_0128_4x3')).toBe('Granny');
+    expect(names.get('NPC_0051_4x3')).toBe('Owner of the Bazaar');
+    expect(names.has('NPC_0999_4x3')).toBe(false);
+  });
+});
